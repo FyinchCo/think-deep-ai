@@ -13,6 +13,9 @@ import { AutoRunControls } from '@/components/cognitive-lab/AutoRunControls';
 import { AnalyticsDashboard } from '@/components/cognitive-lab/AnalyticsDashboard';
 import { SearchAndFilter } from '@/components/cognitive-lab/SearchAndFilter';
 import { CoherenceMonitor } from '@/components/cognitive-lab/CoherenceMonitor';
+import { useCoherenceTracking } from "@/hooks/useCoherenceTracking";
+import { useBrillianceDetection } from "@/hooks/useBrillianceDetection";
+import { BrillianceMonitor } from "@/components/cognitive-lab/BrillianceMonitor";
 
 interface Answer {
   id: string;
@@ -46,7 +49,46 @@ const CognitiveLab = () => {
   const [bookmarkedOnly, setBookmarkedOnly] = useState(false);
   const [activeTab, setActiveTab] = useState('exploration');
   const [showCoherenceMonitor, setShowCoherenceMonitor] = useState(true);
+  const [brillianceModeActive, setBrillianceModeActive] = useState(false);
   const { toast } = useToast();
+
+  const filterAnswers = () => {
+    let filtered = answers;
+
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(answer =>
+        answer.answer_text.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Score filter
+    if (scoreFilter !== 'all' && filtered.length > 0) {
+      filtered = filtered.filter(answer => {
+        if (!answer.judge_scores) return false;
+        const avgScore = (answer.judge_scores.novelty + answer.judge_scores.depth) / 2;
+        
+        switch (scoreFilter) {
+          case 'high': return avgScore >= 8;
+          case 'medium': return avgScore >= 6 && avgScore < 8;
+          case 'low': return avgScore < 6;
+          case 'breakthrough': return answer.judge_scores.breakthrough_potential >= 7;
+          default: return true;
+        }
+      });
+    }
+
+    // Bookmarked filter
+    if (bookmarkedOnly) {
+      filtered = filtered.filter(answer => bookmarkedSteps.has(answer.id));
+    }
+
+    return filtered;
+  };
+
+  const filteredAnswers = filterAnswers();
+  const coherenceMetrics = useCoherenceTracking(filteredAnswers);
+  const brillianceMetrics = useBrillianceDetection(filteredAnswers);
 
   const philosophySuggestions = [
     "What is the nature of consciousness and how does it emerge from physical processes?",
@@ -243,6 +285,31 @@ const CognitiveLab = () => {
     }
   };
 
+  const toggleBrillianceMode = async () => {
+    const newMode = !brillianceModeActive;
+    setBrillianceModeActive(newMode);
+    
+    try {
+      await supabase
+        .from('settings')
+        .upsert({
+          key: 'brilliance_mode',
+          value: { enabled: newMode },
+          description: 'Enable brilliance mode for pure existential exploration'
+        });
+      
+      toast({
+        title: newMode ? "Brilliance Mode Activated" : "Brilliance Mode Deactivated",
+        description: newMode 
+          ? "All practical constraints removed. Following pure insight." 
+          : "Returned to standard exploration mode.",
+      });
+    } catch (error) {
+      console.error('Error toggling brilliance mode:', error);
+      setBrillianceModeActive(!newMode); // Revert on error
+    }
+  };
+
   const resetExploration = () => {
     setCurrentRabbitHole(null);
     setAnswers([]);
@@ -266,41 +333,7 @@ const CognitiveLab = () => {
     });
   };
 
-  const filterAnswers = () => {
-    let filtered = answers;
-
-    // Search filter
-    if (searchTerm) {
-      filtered = filtered.filter(answer =>
-        answer.answer_text.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Score filter
-    if (scoreFilter !== 'all' && filtered.length > 0) {
-      filtered = filtered.filter(answer => {
-        if (!answer.judge_scores) return false;
-        const avgScore = (answer.judge_scores.novelty + answer.judge_scores.depth) / 2;
-        
-        switch (scoreFilter) {
-          case 'high': return avgScore >= 8;
-          case 'medium': return avgScore >= 6 && avgScore < 8;
-          case 'low': return avgScore < 6;
-          case 'breakthrough': return answer.judge_scores.breakthrough_potential >= 7;
-          default: return true;
-        }
-      });
-    }
-
-    // Bookmarked filter
-    if (bookmarkedOnly) {
-      filtered = filtered.filter(answer => bookmarkedSteps.has(answer.id));
-    }
-
-    return filtered;
-  };
-
-  const filteredAnswers = filterAnswers();
+  // Function moved to top of component
 
   const getScoreColor = (score: number) => {
     if (score >= 8) return 'text-success';
@@ -615,10 +648,17 @@ END OF REPORT
                 />
 
                 {showCoherenceMonitor && (
-                  <CoherenceMonitor 
-                    answers={answers}
-                    currentStep={currentRabbitHole.total_steps}
-                  />
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <CoherenceMonitor 
+                      answers={answers}
+                      currentStep={currentRabbitHole.total_steps}
+                    />
+                    <BrillianceMonitor 
+                      metrics={brillianceMetrics}
+                      brillianceModeActive={brillianceModeActive}
+                      onToggleBrillianceMode={toggleBrillianceMode}
+                    />
+                  </div>
                 )}
 
                 <div className="space-y-4">

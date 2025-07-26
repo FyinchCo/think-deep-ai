@@ -190,8 +190,17 @@ async function handleNextStep(rabbit_hole_id: string) {
 
   console.log(`Generating step ${lastAnswer.step_number + 1} for rabbit hole`);
 
+  // Check for brilliance mode setting
+  const { data: brillianceSetting } = await supabase
+    .from('settings')
+    .select('value')
+    .eq('key', 'brilliance_mode')
+    .single();
+  
+  const brilliance_mode = brillianceSetting?.value?.enabled || false;
+  
   // Calculate cognitive pressure for this step
-  const pressureConfig = await calculateCognitivePressure(rabbit_hole_id, lastAnswer.step_number + 1, rabbitHole.domain);
+  const pressureConfig = await calculateCognitivePressure(rabbit_hole_id, lastAnswer.step_number + 1, rabbitHole.domain, brilliance_mode);
   console.log('Pressure config calculated:', JSON.stringify(pressureConfig));
 
   // Check coherence metrics to detect saturation
@@ -805,9 +814,9 @@ async function storeAnswerEmbedding(answerId: string, answerText: string, domain
 }
 
 // Enhanced Pressure System Functions
-async function calculateCognitivePressure(rabbit_hole_id: string, step_number: number, domain: string): Promise<PressureConfig> {
+async function calculateCognitivePressure(rabbit_hole_id: string, step_number: number, domain: string, brilliance_mode: boolean = false): Promise<PressureConfig> {
   try {
-    console.log(`Calculating pressure for step ${step_number}, domain: ${domain}`);
+    console.log(`Calculating pressure for step ${step_number}, domain: ${domain}, brilliance_mode: ${brilliance_mode}`);
     
     // Get count of existing high-quality answers in this domain
     const { count: existingAnswersCount, error: countError } = await supabase
@@ -817,43 +826,69 @@ async function calculateCognitivePressure(rabbit_hole_id: string, step_number: n
       
     console.log(`Existing answers count: ${existingAnswersCount}, error: ${countError}`);
 
-    // Get rabbit hole history to detect stagnation patterns
+    // Get rabbit hole history to detect stagnation patterns and brilliance signals
     const { data: rabbitHoleAnswers, error: historyError } = await supabase
       .from('answers')
-      .select('judge_scores')
+      .select('judge_scores, answer_text')
       .eq('rabbit_hole_id', rabbit_hole_id)
       .eq('is_valid', true)
       .order('step_number', { ascending: true });
       
     console.log(`Rabbit hole history: ${rabbitHoleAnswers?.length || 0} answers, error: ${historyError}`);
 
-    // Calculate base cognitive intensity based on knowledge base density
-    const baseIntensity = Math.min(0.9, 0.3 + (existingAnswersCount || 0) / 100);
-    
-    // Increase pressure based on step number (later steps demand more)
-    const stepPressure = Math.min(0.4, step_number * 0.05);
-    
-    // Detect quality degradation in recent steps
-    let qualityDegradation = 0;
-    if (rabbitHoleAnswers && rabbitHoleAnswers.length >= 2) {
-      const recentScores = rabbitHoleAnswers.slice(-2);
-      const avgNovelty = recentScores.reduce((sum, a) => sum + (a.judge_scores?.novelty || 5), 0) / recentScores.length;
-      if (avgNovelty < 7) qualityDegradation = 0.2;
+    // BRILLIANCE MODE: Detect profound territory and amplify pressure
+    let brillianceAmplifier = 1.0;
+    if (brilliance_mode && rabbitHoleAnswers && rabbitHoleAnswers.length >= 3) {
+      const brillianceScore = detectBrillianceTerritory(rabbitHoleAnswers);
+      brillianceAmplifier = 1.0 + (brillianceScore * 0.8); // Up to 80% amplification
+      console.log(`Brilliance amplifier: ${brillianceAmplifier.toFixed(2)} (score: ${brillianceScore.toFixed(2)})`);
     }
 
-    const cognitive_intensity = Math.min(1.0, baseIntensity + stepPressure + qualityDegradation);
+    // Calculate base cognitive intensity 
+    const baseIntensity = Math.min(0.9, 0.3 + (existingAnswersCount || 0) / 100);
     
-    // Dynamic thresholds based on pressure level - MUCH MORE CONSERVATIVE
-    const novelty_pressure = Math.min(0.5, cognitive_intensity * 0.3); // Reduced multiplier
-    const depth_pressure = Math.min(0.4, cognitive_intensity * 0.2);   // Reduced multiplier
+    // DEPTH INTENSIFICATION: Exponential pressure increase for deep exploration
+    const depthMultiplier = brilliance_mode ? Math.pow(1.15, step_number) : (1 + step_number * 0.05);
+    const stepPressure = Math.min(0.6, step_number * 0.05 * depthMultiplier);
     
-    // Breakthrough threshold much more conservative
-    const breakthrough_threshold = Math.round(5 + cognitive_intensity * 1.5); // Reduced from 3
-    
-    // Stagnation detection enabled for higher steps
-    const stagnation_detection = step_number > 3 && cognitive_intensity > 0.8; // Higher thresholds
+    // Detect quality patterns (both degradation and breakthrough momentum)
+    let qualityModifier = 0;
+    if (rabbitHoleAnswers && rabbitHoleAnswers.length >= 3) {
+      const qualityMomentum = calculateQualityMomentum(rabbitHoleAnswers);
+      
+      if (brilliance_mode && qualityMomentum > 0.3) {
+        // In brilliance mode, high momentum increases pressure (double down on brilliance)
+        qualityModifier = qualityMomentum * 0.4;
+      } else if (!brilliance_mode && qualityMomentum < -0.3) {
+        // In normal mode, declining quality increases pressure (try harder)
+        qualityModifier = Math.abs(qualityMomentum) * 0.2;
+      }
+    }
 
-    console.log(`Cognitive pressure calculated: intensity=${cognitive_intensity.toFixed(2)}, breakthrough_threshold=${breakthrough_threshold}, step=${step_number}`);
+    const cognitive_intensity = Math.min(1.0, 
+      (baseIntensity + stepPressure + qualityModifier) * brillianceAmplifier
+    );
+    
+    // BRILLIANCE MODE: Much more aggressive pressure parameters
+    const novelty_pressure = brilliance_mode 
+      ? Math.min(0.8, cognitive_intensity * 0.6)  // Increased from 0.3
+      : Math.min(0.5, cognitive_intensity * 0.3);
+      
+    const depth_pressure = brilliance_mode
+      ? Math.min(0.7, cognitive_intensity * 0.5)   // Increased from 0.2
+      : Math.min(0.4, cognitive_intensity * 0.2);
+    
+    // BRILLIANCE MODE: Lower breakthrough threshold (easier to trigger breakthroughs)
+    const breakthrough_threshold = brilliance_mode
+      ? Math.round(3 + cognitive_intensity * 1.0)  // More aggressive
+      : Math.round(5 + cognitive_intensity * 1.5); // Conservative
+    
+    // Stagnation detection more sensitive in brilliance mode
+    const stagnation_detection = brilliance_mode 
+      ? step_number > 2 && cognitive_intensity > 0.6
+      : step_number > 3 && cognitive_intensity > 0.8;
+
+    console.log(`Enhanced pressure calculated: intensity=${cognitive_intensity.toFixed(2)}, breakthrough_threshold=${breakthrough_threshold}, brilliance_mode=${brilliance_mode}`);
 
     return {
       cognitive_intensity,
@@ -866,13 +901,76 @@ async function calculateCognitivePressure(rabbit_hole_id: string, step_number: n
     console.error('Error calculating cognitive pressure:', error);
     // Fallback to moderate pressure
     return {
-      cognitive_intensity: 0.5,
-      breakthrough_threshold: 6,
-      novelty_pressure: 0.4,
-      depth_pressure: 0.3,
+      cognitive_intensity: brilliance_mode ? 0.7 : 0.5,
+      breakthrough_threshold: brilliance_mode ? 4 : 6,
+      novelty_pressure: brilliance_mode ? 0.6 : 0.4,
+      depth_pressure: brilliance_mode ? 0.5 : 0.3,
       stagnation_detection: false
     };
   }
+}
+
+// BRILLIANCE DETECTION: Identify when we're in profound conceptual territory
+function detectBrillianceTerritory(answers: any[]): number {
+  const recentAnswers = answers.slice(-3); // Last 3 answers
+  let brillianceScore = 0;
+  
+  for (const answer of recentAnswers) {
+    const text = answer.answer_text || '';
+    
+    // Paradigm shift indicators
+    const paradigmIndicators = [
+      'ontological', 'epistemic', 'paradigm', 'meta-', 'recursive', 
+      'self-referential', 'emergent', 'systemic', 'holistic', 'dialectical',
+      'transcendent', 'immanent', 'liminal', 'apophatic', 'cataphatic'
+    ];
+    
+    // Conceptual novelty indicators  
+    const noveltyPatterns = [
+      /"[^"]*"/, /'[^']*'/, /\*\*[^*]*\*\*/, // New term emphasis
+      /\b[A-Z]{2,}\b/, // Acronyms
+      /\w+-\w+-\w+/ // Hyphenated concepts
+    ];
+    
+    // Calculate paradigm density
+    const paradigmCount = paradigmIndicators.reduce((count, term) => {
+      return count + (text.toLowerCase().split(term).length - 1);
+    }, 0);
+    const paradigmDensity = paradigmCount / (text.length / 1000);
+    
+    // Calculate novelty density
+    let noveltyCount = 0;
+    noveltyPatterns.forEach(pattern => {
+      const matches = text.match(new RegExp(pattern, 'g')) || [];
+      noveltyCount += matches.length;
+    });
+    const noveltyDensity = noveltyCount / (text.length / 1000);
+    
+    // Quality scores boost
+    const avgScore = answer.judge_scores 
+      ? (answer.judge_scores.novelty + answer.judge_scores.depth + answer.judge_scores.breakthrough_potential) / 30
+      : 0.5;
+    
+    brillianceScore += (paradigmDensity * 0.4 + noveltyDensity * 0.3 + avgScore * 0.3);
+  }
+  
+  return Math.min(1.0, brillianceScore / recentAnswers.length);
+}
+
+// QUALITY MOMENTUM: Detect acceleration in quality/breakthrough potential
+function calculateQualityMomentum(answers: any[]): number {
+  if (answers.length < 3) return 0;
+  
+  const getQualityScore = (answer: any) => {
+    if (!answer.judge_scores) return 0.5;
+    const { novelty, depth, breakthrough_potential } = answer.judge_scores;
+    return (novelty + depth + breakthrough_potential) / 30; // Normalize to 0-1
+  };
+  
+  const recent = answers.slice(-3).map(getQualityScore);
+  const momentum = recent[2] - recent[0]; // Change from first to last in window
+  
+  return momentum; // Can be positive (improving) or negative (declining)
 }
 
 async function calculateCoherenceMetrics(rabbit_hole_id: string, step_number: number): Promise<CoherenceMetrics> {
