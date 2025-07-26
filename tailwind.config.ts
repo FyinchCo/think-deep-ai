@@ -53,10 +53,11 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
-				neural: {
-					DEFAULT: 'hsl(var(--neural))',
-					secondary: 'hsl(var(--neural-secondary))',
-					accent: 'hsl(var(--neural-accent))'
+				axiom: {
+					DEFAULT: 'hsl(var(--axiom))',
+					secondary: 'hsl(var(--axiom-secondary))',
+					accent: 'hsl(var(--axiom-accent))',
+					shadow: 'hsl(var(--axiom-shadow))'
 				},
 				success: 'hsl(var(--success))',
 				warning: 'hsl(var(--warning))',
