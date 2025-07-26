@@ -183,11 +183,13 @@ async function handleNextStep(rabbit_hole_id: string) {
 
   // Calculate cognitive pressure for this step
   const pressureConfig = await calculateCognitivePressure(rabbit_hole_id, lastAnswer.step_number + 1, rabbitHole.domain);
+  console.log('Pressure config calculated:', JSON.stringify(pressureConfig));
 
   let retryCount = 0;
   const maxRetries = 3;
 
   while (retryCount < maxRetries) {
+    console.log(`Attempting step ${lastAnswer.step_number + 1}, retry ${retryCount}`);
     try {
       // Generate next answer with pressure applied
       const generatedAnswer = await generateNextAnswer({
@@ -471,6 +473,9 @@ Respond with valid JSON in this exact format:
     const depthMin = Math.round(6 + pressure_config.depth_pressure * 2);
     const breakthroughMin = pressure_config.breakthrough_threshold;
     
+    console.log(`Judge thresholds: novelty>=${noveltyMin}, depth>=${depthMin}, breakthrough>=${breakthroughMin}, pressure=${pressure_config.cognitive_intensity}`);
+    console.log(`Scores: novelty=${scores.novelty}, depth=${scores.depth}, breakthrough=${scores.breakthrough_potential}`);
+    
     if (isFirstStep) {
       scores.overall_pass = scores.novelty >= noveltyMin && 
                            scores.depth >= depthMin && 
@@ -485,6 +490,8 @@ Respond with valid JSON in this exact format:
                            scores.relevance >= 7 &&
                            (scores.breakthrough_potential || 0) >= breakthroughMin;
     }
+    
+    console.log(`Judge decision: ${scores.overall_pass ? 'PASS' : 'FAIL'}`);
     
     return scores;
   } catch (error) {
