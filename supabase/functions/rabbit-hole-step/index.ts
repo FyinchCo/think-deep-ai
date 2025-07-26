@@ -216,11 +216,32 @@ async function handleNextStep(rabbit_hole_id: string) {
       });
 
       // Store the result
+      // Check if this step already exists to prevent duplicates
+      const nextStepNumber = lastAnswer.step_number + 1;
+      const { data: existingAnswer } = await supabase
+        .from('answers')
+        .select('id, is_valid, judge_scores')
+        .eq('rabbit_hole_id', rabbit_hole_id)
+        .eq('step_number', nextStepNumber)
+        .single();
+        
+      if (existingAnswer) {
+        console.log(`Step ${nextStepNumber} already exists, returning existing answer`);
+        return new Response(JSON.stringify({ 
+          success: true, 
+          answer: existingAnswer,
+          judge_scores: existingAnswer.judge_scores,
+          message: `Step ${nextStepNumber} already completed`
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
       const { data: answer, error: answerError } = await supabase
         .from('answers')
         .insert({
           rabbit_hole_id,
-          step_number: lastAnswer.step_number + 1,
+          step_number: nextStepNumber,
           answer_text: generatedAnswer.text,
           is_valid: judgeResult.overall_pass,
           judge_scores: judgeResult,
@@ -233,7 +254,8 @@ async function handleNextStep(rabbit_hole_id: string) {
         .single();
 
       if (answerError) {
-        throw new Error('Failed to store answer');
+        console.log('Insert error:', answerError);
+        throw new Error(`Failed to store answer: ${answerError.message}`);
       }
 
       if (judgeResult.overall_pass) {
