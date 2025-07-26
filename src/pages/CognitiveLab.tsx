@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Brain, Zap, Target, CheckCircle, XCircle, RotateCcw, List, BarChart3, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Brain, Zap, Target, CheckCircle, XCircle, RotateCcw, List, BarChart3, Eye, EyeOff, Download, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { CollapsibleStep } from '@/components/cognitive-lab/CollapsibleStep';
@@ -319,6 +319,113 @@ const CognitiveLab = () => {
     }
   };
 
+  const exportProgressSummary = () => {
+    if (!currentRabbitHole) return;
+    
+    try {
+      const date = new Date().toLocaleString();
+      const summary = `THE AXIOM PROJECT - PROGRESS SUMMARY
+=====================================
+
+Generated: ${date}
+Session ID: ${currentRabbitHole.id}
+Status: ${currentRabbitHole.status}
+
+EXPLORATION OVERVIEW
+==================
+Initial Question: ${currentRabbitHole.initial_question}
+Domain: ${currentRabbitHole.domain}
+Total Steps: ${currentRabbitHole.total_steps}
+Duration: ${new Date(currentRabbitHole.created_at).toLocaleString()} - ${date}
+
+STEPS SUMMARY
+=============
+${answers.map((answer, index) => `Step ${answer.step_number}: ${answer.answer_text.substring(0, 100)}...`).join('\n\n')}
+
+END OF SUMMARY
+=============`;
+
+      const blob = new Blob([summary], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `axiom-project-summary-${currentRabbitHole.id.slice(0, 8)}-${new Date().toISOString().slice(0, 10)}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: 'Export Complete',
+        description: 'Progress summary downloaded',
+      });
+    } catch (error) {
+      toast({
+        title: 'Export Failed',
+        description: 'Failed to generate summary file',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const exportToTxt = () => {
+    if (!currentRabbitHole) return;
+    
+    try {
+      const date = new Date().toLocaleString();
+      const report = `THE AXIOM PROJECT - FULL EXPLORATION REPORT
+==========================================
+
+Generated: ${date}
+Session ID: ${currentRabbitHole.id}
+Status: ${currentRabbitHole.status}
+
+EXPLORATION OVERVIEW
+==================
+Initial Question: ${currentRabbitHole.initial_question}
+Domain: ${currentRabbitHole.domain}
+Total Steps: ${currentRabbitHole.total_steps}
+Started: ${new Date(currentRabbitHole.created_at).toLocaleString()}
+
+FULL EXPLORATION CHAIN
+=====================
+${answers.map((answer, index) => `
+STEP ${answer.step_number}
+--------
+Generated: ${new Date(answer.generated_at).toLocaleString()}
+${answer.judge_scores ? `Scores: N:${answer.judge_scores.novelty} D:${answer.judge_scores.depth} C:${answer.judge_scores.coherence} R:${answer.judge_scores.relevance}` : ''}
+
+${answer.answer_text}
+
+${index < answers.length - 1 ? '---\n' : ''}
+`).join('')}
+
+END OF REPORT
+============`;
+
+      const blob = new Blob([report], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `axiom-project-full-${currentRabbitHole.id.slice(0, 8)}-${new Date().toISOString().slice(0, 10)}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: 'Export Complete',
+        description: 'Full exploration report downloaded',
+      });
+    } catch (error) {
+      toast({
+        title: 'Export Failed',
+        description: 'Failed to generate report file',
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -424,7 +531,7 @@ const CognitiveLab = () => {
                     </Badge>
                   </div>
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <Button
                       variant="outline"
                       size="sm"
@@ -434,7 +541,15 @@ const CognitiveLab = () => {
                       {showScores ? 'Hide Scores' : 'Show Scores'}
                     </Button>
                     
-                    <ExportTools rabbitHole={currentRabbitHole} answers={answers} />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={exportProgressSummary}
+                      className="justify-start"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Export Progress Summary
+                    </Button>
                     
                     <Button
                       variant="outline"
@@ -445,6 +560,16 @@ const CognitiveLab = () => {
                     >
                       {showCoherenceMonitor ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
                       Coherence
+                    </Button>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={exportToTxt}
+                      className="justify-start"
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Export Full Report
                     </Button>
                     
                     <Button
