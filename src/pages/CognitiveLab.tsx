@@ -111,10 +111,18 @@ const CognitiveLab = () => {
       const result = response.data;
       
       if (result.success) {
-        // Force a small delay to ensure database consistency
+        // Update rabbit hole with step count first
+        setCurrentRabbitHole(prev => prev ? {
+          ...prev,
+          total_steps: 1,
+          status: 'active'
+        } : null);
+        
+        // Force reload answers with a delay to ensure database consistency
         setTimeout(async () => {
           await loadAnswers();
-        }, 1000);
+        }, 1500);
+        
         toast({
           title: 'Success!',
           description: 'Your philosophical exploration has begun',
