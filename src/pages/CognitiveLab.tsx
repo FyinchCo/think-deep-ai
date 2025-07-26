@@ -13,8 +13,11 @@ import { AutoRunControls } from '@/components/cognitive-lab/AutoRunControls';
 import { AnalyticsDashboard } from '@/components/cognitive-lab/AnalyticsDashboard';
 import { SearchAndFilter } from '@/components/cognitive-lab/SearchAndFilter';
 import { CoherenceMonitor } from '@/components/cognitive-lab/CoherenceMonitor';
+import { MetricHeartbeat } from '@/components/cognitive-lab/MetricHeartbeat';
+import { PruningRitual } from '@/components/cognitive-lab/PruningRitual';
 import { useCoherenceTracking } from "@/hooks/useCoherenceTracking";
 import { useBrillianceDetection } from "@/hooks/useBrillianceDetection";
+import { useMetricTracking } from "@/hooks/useMetricTracking";
 import { BrillianceMonitor } from "@/components/cognitive-lab/BrillianceMonitor";
 
 interface Answer {
@@ -89,6 +92,12 @@ const CognitiveLab = () => {
   const filteredAnswers = filterAnswers();
   const coherenceMetrics = useCoherenceTracking(filteredAnswers);
   const brillianceMetrics = useBrillianceDetection(filteredAnswers);
+  const { heartbeatMetrics, conceptUsage, lastPruningStep, updateMetrics, pruneConcepts } = useMetricTracking();
+
+  // Update metrics when answers change
+  useEffect(() => {
+    updateMetrics(answers);
+  }, [answers, updateMetrics]);
 
   const philosophySuggestions = [
     "What is the nature of consciousness and how does it emerge from physical processes?",
@@ -648,16 +657,31 @@ END OF REPORT
                 />
 
                 {showCoherenceMonitor && (
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <CoherenceMonitor 
-                      answers={answers}
-                      currentStep={currentRabbitHole.total_steps}
-                    />
-                    <BrillianceMonitor 
-                      metrics={brillianceMetrics}
-                      brillianceModeActive={brillianceModeActive}
-                      onToggleBrillianceMode={toggleBrillianceMode}
-                    />
+                  <div className="space-y-4">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <CoherenceMonitor 
+                        answers={answers}
+                        currentStep={currentRabbitHole.total_steps}
+                      />
+                      <BrillianceMonitor 
+                        metrics={brillianceMetrics}
+                        brillianceModeActive={brillianceModeActive}
+                        onToggleBrillianceMode={toggleBrillianceMode}
+                      />
+                    </div>
+                    
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <MetricHeartbeat 
+                        metrics={heartbeatMetrics}
+                        currentStep={currentRabbitHole.total_steps}
+                      />
+                      <PruningRitual 
+                        concepts={conceptUsage}
+                        currentStep={currentRabbitHole.total_steps}
+                        onPruneConcepts={pruneConcepts}
+                        lastPruningStep={lastPruningStep}
+                      />
+                    </div>
                   </div>
                 )}
 
