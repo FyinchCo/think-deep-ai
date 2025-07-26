@@ -111,7 +111,10 @@ const CognitiveLab = () => {
       const result = response.data;
       
       if (result.success) {
-        await loadAnswers();
+        // Force a small delay to ensure database consistency
+        setTimeout(async () => {
+          await loadAnswers();
+        }, 1000);
         toast({
           title: 'Success!',
           description: 'Your philosophical exploration has begun',
@@ -152,7 +155,10 @@ const CognitiveLab = () => {
       const result = response.data;
       
       if (result.success) {
-        await loadAnswers();
+        // Force a small delay to ensure database consistency
+        setTimeout(async () => {
+          await loadAnswers();
+        }, 1000);
         // Update rabbit hole stats
         setCurrentRabbitHole(prev => prev ? {
           ...prev,
