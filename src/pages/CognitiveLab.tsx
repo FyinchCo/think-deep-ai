@@ -366,9 +366,14 @@ const CognitiveLab = () => {
                               I:{answer.judge_scores.incremental_build}
                             </span>
                           )}
-                          <span className={`font-medium ${getScoreColor(answer.judge_scores.relevance)}`}>
-                            R:{answer.judge_scores.relevance}
-                          </span>
+                           <span className={`font-medium ${getScoreColor(answer.judge_scores.relevance)}`}>
+                             R:{answer.judge_scores.relevance}
+                           </span>
+                           {answer.judge_scores.breakthrough_potential && (
+                             <span className={`font-medium ${getScoreColor(answer.judge_scores.breakthrough_potential)} text-xs bg-neural/10 px-1 rounded`}>
+                               BT:{answer.judge_scores.breakthrough_potential}
+                             </span>
+                           )}
                         </div>
                       )}
                     </div>

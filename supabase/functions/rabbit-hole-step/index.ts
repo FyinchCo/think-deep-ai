@@ -21,8 +21,18 @@ interface JudgeScores {
   incremental_build: number;
   relevance: number;
   global_novelty?: number;
+  breakthrough_potential?: number;
+  cognitive_pressure_applied?: number;
   overall_pass: boolean;
   explanation: string;
+}
+
+interface PressureConfig {
+  cognitive_intensity: number;
+  breakthrough_threshold: number;
+  novelty_pressure: number;
+  depth_pressure: number;
+  stagnation_detection: boolean;
 }
 
 interface VectorSimilarityResult {
@@ -73,20 +83,24 @@ async function handleStartRabbitHole(rabbit_hole_id: string) {
 
   console.log('Starting rabbit hole with question:', rabbitHole.initial_question);
 
-  // Generate the first response directly (no previous context)
-  const generatedAnswer = await generateFirstAnswer(rabbitHole.initial_question, rabbitHole.domain);
+  // Calculate initial pressure config
+  const pressureConfig = await calculateCognitivePressure(rabbit_hole_id, 1, rabbitHole.domain);
+
+  // Generate the first response with pressure applied
+  const generatedAnswer = await generateFirstAnswer(rabbitHole.initial_question, rabbitHole.domain, pressureConfig);
 
       // Check global novelty with vector similarity
       const globalNoveltyCheck = await checkGlobalNovelty(generatedAnswer.text, rabbitHole.domain);
       
-      // Judge the first answer
+      // Judge the first answer with pressure applied
       const judgeResult = await judgeAnswer({
         initial_question: rabbitHole.initial_question,
         previous_answer: null,
         candidate_answer: generatedAnswer.text,
         step_number: 1,
         domain: rabbitHole.domain,
-        global_novelty_score: globalNoveltyCheck.global_novelty_score
+        global_novelty_score: globalNoveltyCheck.global_novelty_score,
+        pressure_config: pressureConfig
       });
 
   // Store the result
@@ -167,31 +181,36 @@ async function handleNextStep(rabbit_hole_id: string) {
 
   console.log(`Generating step ${lastAnswer.step_number + 1} for rabbit hole`);
 
+  // Calculate cognitive pressure for this step
+  const pressureConfig = await calculateCognitivePressure(rabbit_hole_id, lastAnswer.step_number + 1, rabbitHole.domain);
+
   let retryCount = 0;
   const maxRetries = 3;
 
   while (retryCount < maxRetries) {
     try {
-      // Generate next answer
+      // Generate next answer with pressure applied
       const generatedAnswer = await generateNextAnswer({
         initial_question: rabbitHole.initial_question,
         previous_answer: lastAnswer.answer_text,
         step_number: lastAnswer.step_number + 1,
         domain: rabbitHole.domain,
-        retry_feedback: retryCount > 0 ? 'Previous attempt was rejected. Focus on adding genuine new insights.' : null
+        retry_feedback: retryCount > 0 ? 'Previous attempt was rejected. Focus on adding genuine new insights.' : null,
+        pressure_config: pressureConfig
       });
 
       // Check global novelty with vector similarity
       const globalNoveltyCheck = await checkGlobalNovelty(generatedAnswer.text, rabbitHole.domain);
       
-      // Judge the answer
+      // Judge the answer with pressure applied
       const judgeResult = await judgeAnswer({
         initial_question: rabbitHole.initial_question,
         previous_answer: lastAnswer.answer_text,
         candidate_answer: generatedAnswer.text,
         step_number: lastAnswer.step_number + 1,
         domain: rabbitHole.domain,
-        global_novelty_score: globalNoveltyCheck.global_novelty_score
+        global_novelty_score: globalNoveltyCheck.global_novelty_score,
+        pressure_config: pressureConfig
       });
 
       // Store the result
@@ -282,7 +301,11 @@ async function handleNextStep(rabbit_hole_id: string) {
   });
 }
 
-async function generateFirstAnswer(initial_question: string, domain: string) {
+async function generateFirstAnswer(initial_question: string, domain: string, pressure_config: PressureConfig) {
+  const pressureInstructions = pressure_config.cognitive_intensity > 0.7 
+    ? `\n\nCOGNITIVE PRESSURE APPLIED: You are expected to operate at the highest level of intellectual rigor. This exploration will be judged against the quality of existing insights in the knowledge base. Your response must be genuinely novel and profound.`
+    : '';
+
   const prompt = `You are an expert in ${domain} engaged in deep intellectual exploration. You have been given this profound question to explore:
 
 "${initial_question}"
@@ -294,26 +317,36 @@ Your task is to provide the first step in what will become a deep intellectual j
 3. **Provide Genuine Insight**: Offer a meaningful observation, principle, or framework
 4. **Set Foundation**: Create a solid conceptual foundation that can be built upon
 5. **Avoid Generalizations**: Be specific and substantive, not vague or superficial
+6. **Seek Breakthrough**: Challenge conventional thinking and aim for genuinely novel perspectives
 
 Remember: This is the beginning of an incremental journey where each subsequent step must add genuine new value. Make this first step strong and specific enough to enable meaningful progression.
 
-Your response should be thoughtful, substantive (2-4 paragraphs), and represent a clear philosophical or intellectual position that can be deepened.`;
+Your response should be thoughtful, substantive (2-4 paragraphs), and represent a clear philosophical or intellectual position that can be deepened.${pressureInstructions}`;
 
   const response = await callOpenAI(prompt, 0.7);
 
   return {
     text: response,
-    prompt_details: { prompt, model: 'gpt-4o-mini', temperature: 0.7 }
+    prompt_details: { prompt, model: 'gpt-4o-mini', temperature: 0.7, pressure_applied: pressure_config.cognitive_intensity }
   };
 }
 
-async function generateNextAnswer({ initial_question, previous_answer, step_number, domain, retry_feedback }: {
+async function generateNextAnswer({ initial_question, previous_answer, step_number, domain, retry_feedback, pressure_config }: {
   initial_question: string;
   previous_answer: string;
   step_number: number;
   domain: string;
   retry_feedback?: string | null;
+  pressure_config: PressureConfig;
 }) {
+  const pressureInstructions = pressure_config.cognitive_intensity > 0.7 
+    ? `\n\nCOGNITIVE PRESSURE APPLIED (Level ${pressure_config.cognitive_intensity.toFixed(1)}): You are operating under heightened intellectual demands. This step will be judged against breakthrough-level standards. Seek paradigm-shifting insights that transcend conventional reasoning.`
+    : '';
+
+  const noveltyBoost = pressure_config.novelty_pressure > 0.8 
+    ? '\n7. **Paradigm Challenge**: Question fundamental assumptions underlying previous steps'
+    : '';
+
   const prompt = `You are an expert in ${domain} engaged in deep intellectual exploration. This is step ${step_number} of an ongoing investigation.
 
 ORIGINAL QUESTION: "${initial_question}"
@@ -331,30 +364,33 @@ STRICT REQUIREMENTS:
 3. **Maintain Coherence**: Stay logically connected to both the original question and previous step
 4. **Avoid Repetition**: Never rephrase, restate, or circle back to already covered ground
 5. **Be Specific**: Provide concrete insights, not vague generalizations
+6. **Breakthrough Thinking**: Seek insights that could fundamentally shift understanding${noveltyBoost}
 
 PROHIBITED ACTIONS:
 - Repeating previous points in different words
 - Introducing unrelated tangents
 - Giving generic advice or platitudes
 - Simply expanding without adding new depth
+- Accepting conventional wisdom without challenge
 
-Your response should reveal a NEW layer of understanding that builds on what came before while advancing the exploration meaningfully.`;
+Your response should reveal a NEW layer of understanding that builds on what came before while advancing the exploration meaningfully.${pressureInstructions}`;
 
   const response = await callOpenAI(prompt, 0.7);
 
   return {
     text: response,
-    prompt_details: { prompt, model: 'gpt-4o-mini', temperature: 0.7, step_number, retry_feedback }
+    prompt_details: { prompt, model: 'gpt-4o-mini', temperature: 0.7, step_number, retry_feedback, pressure_applied: pressure_config.cognitive_intensity }
   };
 }
 
-async function judgeAnswer({ initial_question, previous_answer, candidate_answer, step_number, domain, global_novelty_score }: {
+async function judgeAnswer({ initial_question, previous_answer, candidate_answer, step_number, domain, global_novelty_score, pressure_config }: {
   initial_question: string;
   previous_answer: string | null;
   candidate_answer: string;
   step_number: number;
   domain: string;
   global_novelty_score?: number;
+  pressure_config: PressureConfig;
 }): Promise<JudgeScores> {
   const isFirstStep = step_number === 1;
 
@@ -398,12 +434,19 @@ Evaluate this candidate answer on these EXACT criteria (score 1-10 for each):
    - 4-6: Somewhat relevant but could be more focused
    - 1-3: Tangential or off-topic
 
-PASSING CRITERIA:
-- Novelty: Must be ≥ 7
-- Depth: Must be ≥ 6  
+6. **BREAKTHROUGH_POTENTIAL** (1-10): Does this have the potential to fundamentally shift understanding?
+   - 9-10: Revolutionary insight that could change how we think about the topic
+   - 7-8: Significant breakthrough potential with novel implications
+   - 4-6: Some innovative elements but incremental
+   - 1-3: Conventional thinking with minimal breakthrough potential
+
+DYNAMIC PASSING CRITERIA (adjusted based on cognitive pressure level ${pressure_config.cognitive_intensity.toFixed(1)}):
+- Novelty: Must be ≥ ${Math.round(7 + pressure_config.novelty_pressure * 2)}
+- Depth: Must be ≥ ${Math.round(6 + pressure_config.depth_pressure * 2)}  
 - Coherence: Must be ≥ 8
 - Incremental Build: Must be ≥ 7 (N/A for first step)
 - Relevance: Must be ≥ 7
+- Breakthrough Potential: Must be ≥ ${pressure_config.breakthrough_threshold}
 
 Respond with valid JSON in this exact format:
 {
@@ -412,6 +455,8 @@ Respond with valid JSON in this exact format:
   "coherence": <score>,
   "incremental_build": <score>,
   "relevance": <score>,
+  "breakthrough_potential": <score>,
+  "cognitive_pressure_applied": ${pressure_config.cognitive_intensity},
   "overall_pass": <true/false>,
   "explanation": "<brief explanation of the decision>"
 }`;
@@ -421,11 +466,24 @@ Respond with valid JSON in this exact format:
   try {
     const scores = JSON.parse(response) as JudgeScores;
     
-    // Validate the passing criteria
+    // Dynamic passing criteria based on pressure config
+    const noveltyMin = Math.round(7 + pressure_config.novelty_pressure * 2);
+    const depthMin = Math.round(6 + pressure_config.depth_pressure * 2);
+    const breakthroughMin = pressure_config.breakthrough_threshold;
+    
     if (isFirstStep) {
-      scores.overall_pass = scores.novelty >= 7 && scores.depth >= 6 && scores.coherence >= 8 && scores.relevance >= 7;
+      scores.overall_pass = scores.novelty >= noveltyMin && 
+                           scores.depth >= depthMin && 
+                           scores.coherence >= 8 && 
+                           scores.relevance >= 7 &&
+                           (scores.breakthrough_potential || 0) >= breakthroughMin;
     } else {
-      scores.overall_pass = scores.novelty >= 7 && scores.depth >= 6 && scores.coherence >= 8 && scores.incremental_build >= 7 && scores.relevance >= 7;
+      scores.overall_pass = scores.novelty >= noveltyMin && 
+                           scores.depth >= depthMin && 
+                           scores.coherence >= 8 && 
+                           scores.incremental_build >= 7 && 
+                           scores.relevance >= 7 &&
+                           (scores.breakthrough_potential || 0) >= breakthroughMin;
     }
     
     return scores;
@@ -438,6 +496,8 @@ Respond with valid JSON in this exact format:
       coherence: 1,
       incremental_build: 1,
       relevance: 1,
+      breakthrough_potential: 1,
+      cognitive_pressure_applied: pressure_config.cognitive_intensity,
       overall_pass: false,
       explanation: 'Failed to parse judge response'
     };
@@ -571,5 +631,72 @@ async function storeAnswerEmbedding(answerId: string, answerText: string, domain
   } catch (error) {
     console.error('Failed to store answer embedding:', error);
     // Non-critical error, don't throw
+  }
+}
+
+// Enhanced Pressure System Functions
+async function calculateCognitivePressure(rabbit_hole_id: string, step_number: number, domain: string): Promise<PressureConfig> {
+  try {
+    // Get count of existing high-quality answers in this domain
+    const { count: existingAnswersCount } = await supabase
+      .from('answers')
+      .select('*', { count: 'exact', head: true })
+      .eq('is_valid', true)
+      .gte('judge_scores->novelty', 7)
+      .gte('judge_scores->depth', 7);
+
+    // Get rabbit hole history to detect stagnation patterns
+    const { data: rabbitHoleAnswers } = await supabase
+      .from('answers')
+      .select('judge_scores')
+      .eq('rabbit_hole_id', rabbit_hole_id)
+      .eq('is_valid', true)
+      .order('step_number', { ascending: true });
+
+    // Calculate base cognitive intensity based on knowledge base density
+    const baseIntensity = Math.min(0.9, 0.3 + (existingAnswersCount || 0) / 100);
+    
+    // Increase pressure based on step number (later steps demand more)
+    const stepPressure = Math.min(0.4, step_number * 0.05);
+    
+    // Detect quality degradation in recent steps
+    let qualityDegradation = 0;
+    if (rabbitHoleAnswers && rabbitHoleAnswers.length >= 2) {
+      const recentScores = rabbitHoleAnswers.slice(-2);
+      const avgNovelty = recentScores.reduce((sum, a) => sum + (a.judge_scores?.novelty || 5), 0) / recentScores.length;
+      if (avgNovelty < 7) qualityDegradation = 0.2;
+    }
+
+    const cognitive_intensity = Math.min(1.0, baseIntensity + stepPressure + qualityDegradation);
+    
+    // Dynamic thresholds based on pressure level
+    const novelty_pressure = Math.min(1.0, cognitive_intensity * 0.8);
+    const depth_pressure = Math.min(1.0, cognitive_intensity * 0.6);
+    
+    // Breakthrough threshold increases with pressure
+    const breakthrough_threshold = Math.round(5 + cognitive_intensity * 3);
+    
+    // Stagnation detection enabled for higher steps
+    const stagnation_detection = step_number > 2 && cognitive_intensity > 0.6;
+
+    console.log(`Cognitive pressure calculated: intensity=${cognitive_intensity.toFixed(2)}, breakthrough_threshold=${breakthrough_threshold}, step=${step_number}`);
+
+    return {
+      cognitive_intensity,
+      breakthrough_threshold,
+      novelty_pressure,
+      depth_pressure,
+      stagnation_detection
+    };
+  } catch (error) {
+    console.error('Error calculating cognitive pressure:', error);
+    // Fallback to moderate pressure
+    return {
+      cognitive_intensity: 0.5,
+      breakthrough_threshold: 6,
+      novelty_pressure: 0.4,
+      depth_pressure: 0.3,
+      stagnation_detection: false
+    };
   }
 }
