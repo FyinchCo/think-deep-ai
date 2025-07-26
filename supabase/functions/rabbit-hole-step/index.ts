@@ -325,7 +325,7 @@ Remember: This is the beginning of an incremental journey where each subsequent 
 
 Your response should be thoughtful, substantive (2-4 paragraphs), and represent a clear philosophical or intellectual position that can be deepened.${pressureInstructions}`;
 
-  const response = await callOpenAI(prompt, 0.7);
+  const response = await callAI(prompt, 0.7);
 
   return {
     text: response,
@@ -377,7 +377,7 @@ PROHIBITED ACTIONS:
 
 Your response should reveal a NEW layer of understanding that builds on what came before while advancing the exploration meaningfully.${pressureInstructions}`;
 
-  const response = await callOpenAI(prompt, 0.7);
+  const response = await callAI(prompt, 0.7);
 
   return {
     text: response,
@@ -463,7 +463,7 @@ Respond with valid JSON in this exact format:
   "explanation": "<brief explanation of the decision>"
 }`;
 
-  const response = await callOpenAI(prompt, 0.1); // Low temperature for consistency
+  const response = await callAI(prompt, 0.1); // Low temperature for consistency
   
   try {
     const scores = JSON.parse(response) as JudgeScores;
@@ -538,6 +538,90 @@ async function callOpenAI(prompt: string, temperature: number): Promise<string> 
 
   const data = await response.json();
   return data.choices[0].message.content;
+}
+
+async function callGemini(prompt: string, temperature: number = 0.7): Promise<string> {
+  const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
+  if (!geminiApiKey) {
+    throw new Error('GEMINI_API_KEY not found');
+  }
+
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      contents: [{
+        parts: [{ text: prompt }]
+      }],
+      generationConfig: {
+        maxOutputTokens: 1000,
+        temperature
+      }
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+  }
+
+  const data = await response.json();
+  return data.candidates[0].content.parts[0].text;
+}
+
+async function callGrok(prompt: string, temperature: number = 0.7): Promise<string> {
+  const grokApiKey = Deno.env.get('GROK_API_KEY');
+  if (!grokApiKey) {
+    throw new Error('GROK_API_KEY not found');
+  }
+
+  const response = await fetch('https://api.x.ai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${grokApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      messages: [{ role: 'user', content: prompt }],
+      model: 'grok-beta',
+      stream: false,
+      temperature,
+      max_tokens: 1000
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Grok API error: ${response.status} - ${errorText}`);
+  }
+
+  const data = await response.json();
+  return data.choices[0].message.content;
+}
+
+// AI call with fallback to Gemini and Grok
+async function callAI(prompt: string, temperature: number): Promise<string> {
+  try {
+    return await callOpenAI(prompt, temperature);
+  } catch (error) {
+    const errorMessage = error.message || '';
+    console.log(`OpenAI failed: ${errorMessage}`);
+    
+    // Fallback to Gemini for rate limits or other errors
+    if (errorMessage.includes('429') || errorMessage.includes('rate limit')) {
+      console.log('Falling back to Gemini due to rate limit');
+      try {
+        return await callGemini(prompt, temperature);
+      } catch (geminiError) {
+        console.log(`Gemini failed: ${geminiError.message}, trying Grok`);
+        return await callGrok(prompt, temperature);
+      }
+    }
+    
+    throw error; // Re-throw if not a rate limit error
+  }
 }
 
 // Vector Store Functions
