@@ -157,13 +157,26 @@ Peak Performance: ${getPeakPerformanceSteps()}`;
   };
 
   const extractKeyTheme = (text: string) => {
-    // Extract first sentence or two, up to about 100 characters
-    const sentences = text.split(/[.!?]+/);
-    let theme = sentences[0];
-    if (theme.length < 80 && sentences[1]) {
-      theme += '. ' + sentences[1];
+    // Clean the text and extract meaningful content
+    const cleanText = text.replace(/^Step \d+:?\s*/, '').trim();
+    
+    // Split into sentences and find the first complete, meaningful sentence
+    const sentences = cleanText.split(/[.!?]+/).filter(s => s.trim().length > 10);
+    
+    if (sentences.length === 0) return cleanText.substring(0, 100) + '...';
+    
+    let theme = sentences[0].trim();
+    
+    // If first sentence is too short and we have more, add the second
+    if (theme.length < 60 && sentences[1]) {
+      theme += '. ' + sentences[1].trim();
     }
-    return theme.length > 120 ? theme.substring(0, 117) + '...' : theme;
+    
+    // Clean up common issues
+    theme = theme.replace(/^(Introducing|Building upon).*?:\s*/, '');
+    theme = theme.replace(/\s+/g, ' ').trim();
+    
+    return theme.length > 150 ? theme.substring(0, 147) + '...' : theme;
   };
 
   const getConnectionTooPrevious = (current: Answer, previous: Answer) => {
@@ -182,11 +195,11 @@ Peak Performance: ${getPeakPerformanceSteps()}`;
 
   const getKeyInsightsChain = () => {
     const keyInsights = answers.filter(a => 
-      (a.judge_scores?.depth && a.judge_scores.depth >= 7) ||
-      (a.judge_scores?.novelty && a.judge_scores.novelty >= 7)
+      (a.judge_scores?.depth && a.judge_scores.depth >= 8) ||
+      (a.judge_scores?.novelty && a.judge_scores.novelty >= 8)
     );
     
-    if (keyInsights.length === 0) return 'No major insights identified.';
+    if (keyInsights.length === 0) return 'No major insights identified (threshold: 8+).';
     
     return keyInsights.map(insight => {
       const framework = extractFrameworkOrTheory(insight.answer_text);
@@ -196,26 +209,48 @@ Peak Performance: ${getPeakPerformanceSteps()}`;
   };
 
   const extractFrameworkOrTheory = (text: string) => {
-    // Look for mentions of frameworks, theories, models, or concepts
-    const patterns = [
-      /(?:framework|theory|model|concept|principle|approach|method)[\s\w]*?[.!?]/gi,
-      /(?:argues?|suggests?|proposes?|demonstrates?)[\s\w]*?[.!?]/gi
+    // Clean the text first
+    const cleanText = text.replace(/^Step \d+:?\s*/, '').trim();
+    
+    // Look for specific framework/theory introductions
+    const frameworkPatterns = [
+      /introducing\s+(?:the\s+)?(?:concept\s+of\s+)?["""]([^"""]+)["""]/i,
+      /introducing\s+(?:the\s+)?([A-Z][^.!?]*(?:Framework|Theory|Model|Index|System|Network|Method|Approach))/i,
+      /(?:framework|theory|model|principle|approach|method|system|index)\s+(?:of\s+)?["""]([^"""]+)["""]/i,
+      /(epistemic\s+\w+(?:\s+\w+)*)/i,
+      /the\s+([A-Z][^.!?]*(?:Framework|Theory|Model|Index|System|Network|Method|Approach|Principle))/i
     ];
     
-    for (const pattern of patterns) {
-      const match = text.match(pattern);
-      if (match) {
-        return match[0].length > 150 ? match[0].substring(0, 147) + '...' : match[0];
+    for (const pattern of frameworkPatterns) {
+      const match = cleanText.match(pattern);
+      if (match && match[1]) {
+        let result = match[1].trim();
+        result = result.replace(/^(the\s+)?/, '').trim();
+        return result.length > 100 ? result.substring(0, 97) + '...' : result;
       }
     }
     
-    // Fallback to first sentence
+    // Look for key concepts being discussed
+    const conceptPatterns = [
+      /(?:argues?|suggests?|proposes?|demonstrates?|explores?)\s+(?:that\s+)?([^.!?]{20,100})/i,
+      /(?:this|the)\s+([^.!?]{30,120}(?:suggests?|argues?|demonstrates?))/i
+    ];
+    
+    for (const pattern of conceptPatterns) {
+      const match = cleanText.match(pattern);
+      if (match && match[1]) {
+        let result = match[1].trim();
+        return result.length > 100 ? result.substring(0, 97) + '...' : result;
+      }
+    }
+    
+    // Fallback to cleaned key theme
     return extractKeyTheme(text);
   };
 
   const getEnhancedBreakthroughAnalysis = () => {
     const breakthroughs = answers.filter(a => 
-      a.judge_scores?.breakthrough_potential && a.judge_scores.breakthrough_potential >= 7
+      a.judge_scores?.breakthrough_potential && a.judge_scores.breakthrough_potential >= 8
     );
     
     if (breakthroughs.length === 0) return 'No significant breakthrough moments detected.';
@@ -286,7 +321,7 @@ Overall Journey: ${getJourneyDescription()}`;
     const totalSteps = answers.length;
     const avgQuality = calculateAverageScores();
     const breakthroughCount = answers.filter(a => 
-      a.judge_scores?.breakthrough_potential && a.judge_scores.breakthrough_potential >= 7
+      a.judge_scores?.breakthrough_potential && a.judge_scores.breakthrough_potential >= 8
     ).length;
     
     return `${totalSteps}-step intellectual journey with ${avgQuality.depth.toFixed(1)} avg depth, ${breakthroughCount} breakthrough moments. ${getJourneyCharacter()}`;
