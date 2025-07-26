@@ -326,7 +326,7 @@ Overall Journey: ${getJourneyDescription()}`;
     const totalSteps = answers.length;
     const avgQuality = calculateAverageScores();
     const breakthroughCount = answers.filter(a => 
-      a.judge_scores?.breakthrough_potential && a.judge_scores.breakthrough_potential >= 8
+      a.judge_scores?.breakthrough_potential && a.judge_scores.breakthrough_potential >= 8.7
     ).length;
     
     return `${totalSteps}-step intellectual journey with ${avgQuality.depth.toFixed(1)} avg depth, ${breakthroughCount} breakthrough moments. ${getJourneyCharacter()}`;
