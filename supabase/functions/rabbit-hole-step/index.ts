@@ -20,8 +20,16 @@ interface JudgeScores {
   coherence: number;
   incremental_build: number;
   relevance: number;
+  global_novelty?: number;
   overall_pass: boolean;
   explanation: string;
+}
+
+interface VectorSimilarityResult {
+  answer_id: string;
+  similarity_score: number;
+  answer_text: string;
+  domain: string;
 }
 
 serve(async (req) => {
@@ -68,14 +76,18 @@ async function handleStartRabbitHole(rabbit_hole_id: string) {
   // Generate the first response directly (no previous context)
   const generatedAnswer = await generateFirstAnswer(rabbitHole.initial_question, rabbitHole.domain);
 
-  // Judge the first answer
-  const judgeResult = await judgeAnswer({
-    initial_question: rabbitHole.initial_question,
-    previous_answer: null,
-    candidate_answer: generatedAnswer.text,
-    step_number: 1,
-    domain: rabbitHole.domain
-  });
+      // Check global novelty with vector similarity
+      const globalNoveltyCheck = await checkGlobalNovelty(generatedAnswer.text, rabbitHole.domain);
+      
+      // Judge the first answer
+      const judgeResult = await judgeAnswer({
+        initial_question: rabbitHole.initial_question,
+        previous_answer: null,
+        candidate_answer: generatedAnswer.text,
+        step_number: 1,
+        domain: rabbitHole.domain,
+        global_novelty_score: globalNoveltyCheck.global_novelty_score
+      });
 
   // Store the result
   const { data: answer, error: answerError } = await supabase
@@ -446,4 +458,105 @@ async function callOpenAI(prompt: string, temperature: number): Promise<string> 
 
   const data = await response.json();
   return data.choices[0].message.content;
+}
+
+// Vector Store Functions
+async function generateEmbedding(text: string): Promise<number[]> {
+  if (!openaiApiKey) {
+    throw new Error('OpenAI API key not configured');
+  }
+
+  const response = await fetch('https://api.openai.com/v1/embeddings', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${openaiApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'text-embedding-3-small',
+      input: text,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`OpenAI Embeddings API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.data[0].embedding;
+}
+
+async function checkGlobalNovelty(candidateText: string, domain: string): Promise<{
+  is_novel: boolean;
+  global_novelty_score: number;
+  most_similar_answers: VectorSimilarityResult[];
+}> {
+  try {
+    // Get similarity threshold from settings
+    const { data: settings } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'vector_similarity_threshold')
+      .single();
+    
+    const threshold = settings ? parseFloat(settings.value as string) : 0.95;
+
+    // Generate embedding for candidate text
+    const embedding = await generateEmbedding(candidateText);
+
+    // Find most similar existing answers
+    const { data: similarAnswers, error } = await supabase.rpc('find_similar_answers', {
+      query_embedding: JSON.stringify(embedding),
+      similarity_threshold: threshold,
+      match_count: 5,
+      filter_domain: domain
+    });
+
+    if (error) {
+      console.warn('Vector similarity check failed:', error);
+      // Fallback: assume novel if vector check fails
+      return {
+        is_novel: true,
+        global_novelty_score: 8,
+        most_similar_answers: []
+      };
+    }
+
+    const mostSimilar = similarAnswers?.[0];
+    const maxSimilarity = mostSimilar?.similarity_score || 0;
+
+    // Calculate global novelty score (1-10, where 10 is completely novel)
+    const global_novelty_score = Math.max(1, Math.round((1 - maxSimilarity) * 10));
+
+    return {
+      is_novel: maxSimilarity < threshold,
+      global_novelty_score,
+      most_similar_answers: similarAnswers || []
+    };
+  } catch (error) {
+    console.error('Global novelty check error:', error);
+    // Fallback: assume novel
+    return {
+      is_novel: true,
+      global_novelty_score: 8,
+      most_similar_answers: []
+    };
+  }
+}
+
+async function storeAnswerEmbedding(answerId: string, answerText: string, domain: string): Promise<void> {
+  try {
+    const embedding = await generateEmbedding(answerText);
+    
+    await supabase
+      .from('answer_embeddings')
+      .insert({
+        answer_id: answerId,
+        embedding: JSON.stringify(embedding),
+        domain: domain
+      });
+  } catch (error) {
+    console.error('Failed to store answer embedding:', error);
+    // Non-critical error, don't throw
+  }
 }
