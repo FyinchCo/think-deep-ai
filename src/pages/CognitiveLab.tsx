@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Brain, Zap, Target, CheckCircle, XCircle, RotateCcw, List, BarChart3 } from 'lucide-react';
+import { Loader2, Brain, Zap, Target, CheckCircle, XCircle, RotateCcw, List, BarChart3, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { CollapsibleStep } from '@/components/cognitive-lab/CollapsibleStep';
@@ -45,6 +45,7 @@ const CognitiveLab = () => {
   const [scoreFilter, setScoreFilter] = useState('all');
   const [bookmarkedOnly, setBookmarkedOnly] = useState(false);
   const [activeTab, setActiveTab] = useState('exploration');
+  const [showCoherenceMonitor, setShowCoherenceMonitor] = useState(true);
   const { toast } = useToast();
 
   const philosophySuggestions = [
@@ -426,6 +427,15 @@ const CognitiveLab = () => {
                     >
                       {showScores ? 'Hide Scores' : 'Show Scores'}
                     </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowCoherenceMonitor(!showCoherenceMonitor)}
+                      title={showCoherenceMonitor ? 'Hide Coherence Monitor' : 'Show Coherence Monitor'}
+                    >
+                      {showCoherenceMonitor ? <EyeOff className="h-4 w-4 mr-1" /> : <Eye className="h-4 w-4 mr-1" />}
+                      Coherence Monitor
+                    </Button>
                     <ExportTools rabbitHole={currentRabbitHole} answers={answers} />
                     <Button
                       variant="outline"
@@ -468,10 +478,12 @@ const CognitiveLab = () => {
                   filteredResults={filteredAnswers.length}
                 />
 
-                <CoherenceMonitor 
-                  answers={answers}
-                  currentStep={currentRabbitHole.total_steps}
-                />
+                {showCoherenceMonitor && (
+                  <CoherenceMonitor 
+                    answers={answers}
+                    currentStep={currentRabbitHole.total_steps}
+                  />
+                )}
 
                 <div className="space-y-4">
                   {filteredAnswers.map((answer, index) => (
