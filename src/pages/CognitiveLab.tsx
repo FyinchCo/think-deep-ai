@@ -414,37 +414,50 @@ const CognitiveLab = () => {
                     </Badge>
                   </div>
                 </div>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-4">
+                <div className="space-y-4 mt-6">
                   <div className="flex items-center gap-4">
-                    <Badge variant="outline">{currentRabbitHole.total_steps} steps</Badge>
-                    <Badge variant="outline">{currentRabbitHole.domain}</Badge>
+                    <Badge variant="outline" className="text-sm">
+                      {currentRabbitHole.total_steps} steps
+                    </Badge>
+                    <Badge variant="outline" className="text-sm">
+                      {currentRabbitHole.domain}
+                    </Badge>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowScores(!showScores)}
-                    >
-                      {showScores ? 'Hide Scores' : 'Show Scores'}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowCoherenceMonitor(!showCoherenceMonitor)}
-                      title={showCoherenceMonitor ? 'Hide Coherence Monitor' : 'Show Coherence Monitor'}
-                    >
-                      {showCoherenceMonitor ? <EyeOff className="h-4 w-4 mr-1" /> : <Eye className="h-4 w-4 mr-1" />}
-                      Coherence Monitor
-                    </Button>
-                    <ExportTools rabbitHole={currentRabbitHole} answers={answers} />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={resetExploration}
-                    >
-                      <RotateCcw className="h-4 w-4 mr-1" />
-                      New Exploration
-                    </Button>
+                  
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowScores(!showScores)}
+                        className="min-w-fit"
+                      >
+                        {showScores ? 'Hide Scores' : 'Show Scores'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowCoherenceMonitor(!showCoherenceMonitor)}
+                        title={showCoherenceMonitor ? 'Hide Coherence Monitor' : 'Show Coherence Monitor'}
+                        className="min-w-fit"
+                      >
+                        {showCoherenceMonitor ? <EyeOff className="h-4 w-4 mr-1" /> : <Eye className="h-4 w-4 mr-1" />}
+                        Coherence
+                      </Button>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-2 sm:ml-auto">
+                      <ExportTools rabbitHole={currentRabbitHole} answers={answers} />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={resetExploration}
+                        className="min-w-fit"
+                      >
+                        <RotateCcw className="h-4 w-4 mr-1" />
+                        New Exploration
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardHeader>
