@@ -14,7 +14,165 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      answers: {
+        Row: {
+          answer_text: string
+          generated_at: string
+          generator_model: string | null
+          generator_prompt_details: Json | null
+          id: string
+          is_valid: boolean
+          judge_feedback: string | null
+          judge_model: string | null
+          judge_prompt_details: Json | null
+          judge_scores: Json | null
+          parent_answer_id: string | null
+          rabbit_hole_id: string
+          retry_count: number
+          step_number: number
+        }
+        Insert: {
+          answer_text: string
+          generated_at?: string
+          generator_model?: string | null
+          generator_prompt_details?: Json | null
+          id?: string
+          is_valid?: boolean
+          judge_feedback?: string | null
+          judge_model?: string | null
+          judge_prompt_details?: Json | null
+          judge_scores?: Json | null
+          parent_answer_id?: string | null
+          rabbit_hole_id: string
+          retry_count?: number
+          step_number: number
+        }
+        Update: {
+          answer_text?: string
+          generated_at?: string
+          generator_model?: string | null
+          generator_prompt_details?: Json | null
+          id?: string
+          is_valid?: boolean
+          judge_feedback?: string | null
+          judge_model?: string | null
+          judge_prompt_details?: Json | null
+          judge_scores?: Json | null
+          parent_answer_id?: string | null
+          rabbit_hole_id?: string
+          retry_count?: number
+          step_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "answers_parent_answer_id_fkey"
+            columns: ["parent_answer_id"]
+            isOneToOne: false
+            referencedRelation: "answers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "answers_rabbit_hole_id_fkey"
+            columns: ["rabbit_hole_id"]
+            isOneToOne: false
+            referencedRelation: "rabbit_holes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events: {
+        Row: {
+          answer_id: string | null
+          event_type: string
+          id: string
+          payload: Json | null
+          rabbit_hole_id: string | null
+          timestamp: string
+        }
+        Insert: {
+          answer_id?: string | null
+          event_type: string
+          id?: string
+          payload?: Json | null
+          rabbit_hole_id?: string | null
+          timestamp?: string
+        }
+        Update: {
+          answer_id?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json | null
+          rabbit_hole_id?: string | null
+          timestamp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_answer_id_fkey"
+            columns: ["answer_id"]
+            isOneToOne: false
+            referencedRelation: "answers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_rabbit_hole_id_fkey"
+            columns: ["rabbit_hole_id"]
+            isOneToOne: false
+            referencedRelation: "rabbit_holes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rabbit_holes: {
+        Row: {
+          created_at: string
+          domain: string
+          id: string
+          initial_question: string
+          last_updated_at: string
+          status: string
+          total_steps: number
+        }
+        Insert: {
+          created_at?: string
+          domain?: string
+          id?: string
+          initial_question: string
+          last_updated_at?: string
+          status?: string
+          total_steps?: number
+        }
+        Update: {
+          created_at?: string
+          domain?: string
+          id?: string
+          initial_question?: string
+          last_updated_at?: string
+          status?: string
+          total_steps?: number
+        }
+        Relationships: []
+      }
+      settings: {
+        Row: {
+          description: string | null
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          description?: string | null
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          description?: string | null
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

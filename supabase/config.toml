@@ -1,1 +1,4 @@
 project_id = "oypsdwgvjwycgjxfqndi"
+
+[functions.rabbit-hole-step]
+verify_jwt = false
