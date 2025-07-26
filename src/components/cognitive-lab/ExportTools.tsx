@@ -255,7 +255,7 @@ Peak Performance: ${getPeakPerformanceSteps()}`;
 
   const getEnhancedBreakthroughAnalysis = () => {
     const breakthroughs = answers.filter(a => 
-      a.judge_scores?.breakthrough_potential && a.judge_scores.breakthrough_potential >= 8
+      a.judge_scores?.breakthrough_potential && a.judge_scores.breakthrough_potential >= 8.7
     );
     
     if (breakthroughs.length === 0) return 'No significant breakthrough moments detected.';
