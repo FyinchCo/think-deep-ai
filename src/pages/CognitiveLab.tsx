@@ -424,40 +424,38 @@ const CognitiveLab = () => {
                     </Badge>
                   </div>
                   
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowScores(!showScores)}
-                        className="min-w-fit"
-                      >
-                        {showScores ? 'Hide Scores' : 'Show Scores'}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowCoherenceMonitor(!showCoherenceMonitor)}
-                        title={showCoherenceMonitor ? 'Hide Coherence Monitor' : 'Show Coherence Monitor'}
-                        className="min-w-fit"
-                      >
-                        {showCoherenceMonitor ? <EyeOff className="h-4 w-4 mr-1" /> : <Eye className="h-4 w-4 mr-1" />}
-                        Coherence
-                      </Button>
-                    </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowScores(!showScores)}
+                      className="justify-start"
+                    >
+                      {showScores ? 'Hide Scores' : 'Show Scores'}
+                    </Button>
                     
-                    <div className="flex flex-wrap gap-2 sm:ml-auto">
-                      <ExportTools rabbitHole={currentRabbitHole} answers={answers} />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={resetExploration}
-                        className="min-w-fit"
-                      >
-                        <RotateCcw className="h-4 w-4 mr-1" />
-                        New Exploration
-                      </Button>
-                    </div>
+                    <ExportTools rabbitHole={currentRabbitHole} answers={answers} />
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowCoherenceMonitor(!showCoherenceMonitor)}
+                      title={showCoherenceMonitor ? 'Hide Coherence Monitor' : 'Show Coherence Monitor'}
+                      className="justify-start"
+                    >
+                      {showCoherenceMonitor ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
+                      Coherence
+                    </Button>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={resetExploration}
+                      className="justify-start"
+                    >
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                      New Exploration
+                    </Button>
                   </div>
                 </div>
               </CardHeader>
