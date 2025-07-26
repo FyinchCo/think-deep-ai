@@ -98,7 +98,7 @@ EXPLORATION OVERVIEW
 ==================
 Initial Question: ${rabbitHole.initial_question}
 Domain: ${rabbitHole.domain}
-Total Steps: ${rabbitHole.total_steps}
+Total Steps: ${answers.length}
 Duration: ${new Date(rabbitHole.created_at).toLocaleString()} - ${date}
 
 QUALITY EVOLUTION
@@ -157,26 +157,31 @@ Peak Performance: ${getPeakPerformanceSteps()}`;
   };
 
   const extractKeyTheme = (text: string) => {
-    // Clean the text and extract meaningful content
+    // Clean the text first by removing step indicators
     const cleanText = text.replace(/^Step \d+:?\s*/, '').trim();
     
-    // Split into sentences and find the first complete, meaningful sentence
-    const sentences = cleanText.split(/[.!?]+/).filter(s => s.trim().length > 10);
-    
-    if (sentences.length === 0) return cleanText.substring(0, 100) + '...';
-    
-    let theme = sentences[0].trim();
-    
-    // If first sentence is too short and we have more, add the second
-    if (theme.length < 60 && sentences[1]) {
-      theme += '. ' + sentences[1].trim();
+    // Extract the first meaningful paragraph, aiming for 80-150 characters
+    const paragraphs = cleanText.split('\n\n').filter(p => p.trim().length > 0);
+    if (paragraphs.length > 0) {
+      let content = paragraphs[0].trim();
+      // Remove any remaining formatting
+      content = content.replace(/^\*+\s*/, '').replace(/\*+$/, '').trim();
+      
+      // If it's very long, try to cut at a sentence boundary
+      if (content.length > 120) {
+        const sentences = content.split(/[.!?]/).filter(s => s.trim().length > 0);
+        if (sentences.length > 0 && sentences[0].length > 30) {
+          content = sentences[0].trim();
+        } else {
+          content = content.substring(0, 117) + '...';
+        }
+      }
+      
+      return content;
     }
     
-    // Clean up common issues
-    theme = theme.replace(/^(Introducing|Building upon).*?:\s*/, '');
-    theme = theme.replace(/\s+/g, ' ').trim();
-    
-    return theme.length > 150 ? theme.substring(0, 147) + '...' : theme;
+    // Fallback to first part of the text
+    return cleanText.length > 120 ? cleanText.substring(0, 117) + '...' : cleanText;
   };
 
   const getConnectionTooPrevious = (current: Answer, previous: Answer) => {
