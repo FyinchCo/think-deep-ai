@@ -644,21 +644,25 @@ async function storeAnswerEmbedding(answerId: string, answerText: string, domain
 // Enhanced Pressure System Functions
 async function calculateCognitivePressure(rabbit_hole_id: string, step_number: number, domain: string): Promise<PressureConfig> {
   try {
+    console.log(`Calculating pressure for step ${step_number}, domain: ${domain}`);
+    
     // Get count of existing high-quality answers in this domain
-    const { count: existingAnswersCount } = await supabase
+    const { count: existingAnswersCount, error: countError } = await supabase
       .from('answers')
       .select('*', { count: 'exact', head: true })
-      .eq('is_valid', true)
-      .gte('judge_scores->novelty', 7)
-      .gte('judge_scores->depth', 7);
+      .eq('is_valid', true);
+      
+    console.log(`Existing answers count: ${existingAnswersCount}, error: ${countError}`);
 
     // Get rabbit hole history to detect stagnation patterns
-    const { data: rabbitHoleAnswers } = await supabase
+    const { data: rabbitHoleAnswers, error: historyError } = await supabase
       .from('answers')
       .select('judge_scores')
       .eq('rabbit_hole_id', rabbit_hole_id)
       .eq('is_valid', true)
       .order('step_number', { ascending: true });
+      
+    console.log(`Rabbit hole history: ${rabbitHoleAnswers?.length || 0} answers, error: ${historyError}`);
 
     // Calculate base cognitive intensity based on knowledge base density
     const baseIntensity = Math.min(0.9, 0.3 + (existingAnswersCount || 0) / 100);
@@ -676,15 +680,15 @@ async function calculateCognitivePressure(rabbit_hole_id: string, step_number: n
 
     const cognitive_intensity = Math.min(1.0, baseIntensity + stepPressure + qualityDegradation);
     
-    // Dynamic thresholds based on pressure level
-    const novelty_pressure = Math.min(1.0, cognitive_intensity * 0.8);
-    const depth_pressure = Math.min(1.0, cognitive_intensity * 0.6);
+    // Dynamic thresholds based on pressure level - MUCH MORE CONSERVATIVE
+    const novelty_pressure = Math.min(0.5, cognitive_intensity * 0.3); // Reduced multiplier
+    const depth_pressure = Math.min(0.4, cognitive_intensity * 0.2);   // Reduced multiplier
     
-    // Breakthrough threshold increases with pressure
-    const breakthrough_threshold = Math.round(5 + cognitive_intensity * 3);
+    // Breakthrough threshold much more conservative
+    const breakthrough_threshold = Math.round(5 + cognitive_intensity * 1.5); // Reduced from 3
     
     // Stagnation detection enabled for higher steps
-    const stagnation_detection = step_number > 2 && cognitive_intensity > 0.6;
+    const stagnation_detection = step_number > 3 && cognitive_intensity > 0.8; // Higher thresholds
 
     console.log(`Cognitive pressure calculated: intensity=${cognitive_intensity.toFixed(2)}, breakthrough_threshold=${breakthrough_threshold}, step=${step_number}`);
 
