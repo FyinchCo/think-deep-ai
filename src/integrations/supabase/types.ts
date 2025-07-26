@@ -211,6 +211,20 @@ export type Database = {
         Args: { "": string } | { "": unknown }
         Returns: unknown
       }
+      find_similar_answers: {
+        Args: {
+          query_embedding: string
+          similarity_threshold?: number
+          match_count?: number
+          filter_domain?: string
+        }
+        Returns: {
+          answer_id: string
+          similarity_score: number
+          answer_text: string
+          domain: string
+        }[]
+      }
       halfvec_avg: {
         Args: { "": number[] }
         Returns: unknown

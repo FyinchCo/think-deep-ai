@@ -2,3 +2,6 @@ project_id = "oypsdwgvjwycgjxfqndi"
 
 [functions.rabbit-hole-step]
 verify_jwt = false
+
+[functions.backfill-embeddings]
+verify_jwt = false

@@ -111,24 +111,29 @@ async function handleStartRabbitHole(rabbit_hole_id: string) {
     throw new Error('Failed to store first answer');
   }
 
-  // Update rabbit hole status
-  await supabase
-    .from('rabbit_holes')
-    .update({ 
-      total_steps: 1,
-      status: judgeResult.overall_pass ? 'active' : 'stalled'
-    })
-    .eq('id', rabbit_hole_id);
+        // Store answer embedding if valid
+        if (judgeResult.overall_pass) {
+          await storeAnswerEmbedding(answer.id, generatedAnswer.text, rabbitHole.domain);
+        }
 
-  // Log event
-  await supabase
-    .from('events')
-    .insert({
-      event_type: judgeResult.overall_pass ? 'AnswerValidated' : 'AnswerRejected',
-      rabbit_hole_id,
-      answer_id: answer.id,
-      payload: { judge_scores: judgeResult, step_number: 1 }
-    });
+        // Update rabbit hole status
+        await supabase
+          .from('rabbit_holes')
+          .update({ 
+            total_steps: 1,
+            status: judgeResult.overall_pass ? 'active' : 'stalled'
+          })
+          .eq('id', rabbit_hole_id);
+
+        // Log event
+        await supabase
+          .from('events')
+          .insert({
+            event_type: judgeResult.overall_pass ? 'AnswerValidated' : 'AnswerRejected',
+            rabbit_hole_id,
+            answer_id: answer.id,
+            payload: { judge_scores: judgeResult, step_number: 1 }
+          });
 
   return new Response(JSON.stringify({
     success: true,
@@ -176,13 +181,17 @@ async function handleNextStep(rabbit_hole_id: string) {
         retry_feedback: retryCount > 0 ? 'Previous attempt was rejected. Focus on adding genuine new insights.' : null
       });
 
+      // Check global novelty with vector similarity
+      const globalNoveltyCheck = await checkGlobalNovelty(generatedAnswer.text, rabbitHole.domain);
+      
       // Judge the answer
       const judgeResult = await judgeAnswer({
         initial_question: rabbitHole.initial_question,
         previous_answer: lastAnswer.answer_text,
         candidate_answer: generatedAnswer.text,
         step_number: lastAnswer.step_number + 1,
-        domain: rabbitHole.domain
+        domain: rabbitHole.domain,
+        global_novelty_score: globalNoveltyCheck.global_novelty_score
       });
 
       // Store the result
@@ -207,6 +216,9 @@ async function handleNextStep(rabbit_hole_id: string) {
       }
 
       if (judgeResult.overall_pass) {
+        // Store answer embedding for valid answers
+        await storeAnswerEmbedding(answer.id, generatedAnswer.text, rabbitHole.domain);
+        
         // Success! Update rabbit hole
         await supabase
           .from('rabbit_holes')
@@ -336,12 +348,13 @@ Your response should reveal a NEW layer of understanding that builds on what cam
   };
 }
 
-async function judgeAnswer({ initial_question, previous_answer, candidate_answer, step_number, domain }: {
+async function judgeAnswer({ initial_question, previous_answer, candidate_answer, step_number, domain, global_novelty_score }: {
   initial_question: string;
   previous_answer: string | null;
   candidate_answer: string;
   step_number: number;
   domain: string;
+  global_novelty_score?: number;
 }): Promise<JudgeScores> {
   const isFirstStep = step_number === 1;
 
