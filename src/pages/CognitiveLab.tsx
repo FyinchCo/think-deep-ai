@@ -3,9 +3,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Brain, Zap, Target, CheckCircle, XCircle, RotateCcw } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Loader2, Brain, Zap, Target, CheckCircle, XCircle, RotateCcw, List, BarChart3 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { CollapsibleStep } from '@/components/cognitive-lab/CollapsibleStep';
+import { ExportTools } from '@/components/cognitive-lab/ExportTools';
+import { AutoRunControls } from '@/components/cognitive-lab/AutoRunControls';
+import { AnalyticsDashboard } from '@/components/cognitive-lab/AnalyticsDashboard';
+import { SearchAndFilter } from '@/components/cognitive-lab/SearchAndFilter';
 
 interface Answer {
   id: string;
@@ -32,6 +38,12 @@ const CognitiveLab = () => {
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showScores, setShowScores] = useState(false);
+  const [isAutoRunning, setIsAutoRunning] = useState(false);
+  const [bookmarkedSteps, setBookmarkedSteps] = useState<Set<string>>(new Set());
+  const [searchTerm, setSearchTerm] = useState('');
+  const [scoreFilter, setScoreFilter] = useState('all');
+  const [bookmarkedOnly, setBookmarkedOnly] = useState(false);
+  const [activeTab, setActiveTab] = useState('exploration');
   const { toast } = useToast();
 
   const philosophySuggestions = [
@@ -203,7 +215,60 @@ const CognitiveLab = () => {
     setCurrentRabbitHole(null);
     setAnswers([]);
     setQuestion('');
+    setBookmarkedSteps(new Set());
+    setSearchTerm('');
+    setScoreFilter('all');
+    setBookmarkedOnly(false);
+    setIsAutoRunning(false);
   };
+
+  const toggleBookmark = (stepId: string) => {
+    setBookmarkedSteps(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(stepId)) {
+        newSet.delete(stepId);
+      } else {
+        newSet.add(stepId);
+      }
+      return newSet;
+    });
+  };
+
+  const filterAnswers = () => {
+    let filtered = answers;
+
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(answer =>
+        answer.answer_text.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Score filter
+    if (scoreFilter !== 'all' && filtered.length > 0) {
+      filtered = filtered.filter(answer => {
+        if (!answer.judge_scores) return false;
+        const avgScore = (answer.judge_scores.novelty + answer.judge_scores.depth) / 2;
+        
+        switch (scoreFilter) {
+          case 'high': return avgScore >= 8;
+          case 'medium': return avgScore >= 6 && avgScore < 8;
+          case 'low': return avgScore < 6;
+          case 'breakthrough': return answer.judge_scores.breakthrough_potential >= 7;
+          default: return true;
+        }
+      });
+    }
+
+    // Bookmarked filter
+    if (bookmarkedOnly) {
+      filtered = filtered.filter(answer => bookmarkedSteps.has(answer.id));
+    }
+
+    return filtered;
+  };
+
+  const filteredAnswers = filterAnswers();
 
   const getScoreColor = (score: number) => {
     if (score >= 8) return 'text-success';
@@ -330,6 +395,7 @@ const CognitiveLab = () => {
                     >
                       {showScores ? 'Hide Scores' : 'Show Scores'}
                     </Button>
+                    <ExportTools rabbitHole={currentRabbitHole} answers={answers} />
                     <Button
                       variant="outline"
                       size="sm"
@@ -343,52 +409,67 @@ const CognitiveLab = () => {
               </CardHeader>
             </Card>
 
-            {/* Answer Chain */}
-            <div className="space-y-4">
-              {answers.map((answer, index) => (
-                <Card key={answer.id} className="border-l-4 border-l-neural shadow-lg">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <Badge className="bg-neural text-white">Step {answer.step_number}</Badge>
-                      {showScores && answer.judge_scores && (
-                        <div className="flex gap-2 text-xs">
-                          <span className={`font-medium ${getScoreColor(answer.judge_scores.novelty)}`}>
-                            N:{answer.judge_scores.novelty}
-                          </span>
-                          <span className={`font-medium ${getScoreColor(answer.judge_scores.depth)}`}>
-                            D:{answer.judge_scores.depth}
-                          </span>
-                          <span className={`font-medium ${getScoreColor(answer.judge_scores.coherence)}`}>
-                            C:{answer.judge_scores.coherence}
-                          </span>
-                          {answer.step_number > 1 && (
-                            <span className={`font-medium ${getScoreColor(answer.judge_scores.incremental_build)}`}>
-                              I:{answer.judge_scores.incremental_build}
-                            </span>
-                          )}
-                           <span className={`font-medium ${getScoreColor(answer.judge_scores.relevance)}`}>
-                             R:{answer.judge_scores.relevance}
-                           </span>
-                           {answer.judge_scores.breakthrough_potential && (
-                             <span className={`font-medium ${getScoreColor(answer.judge_scores.breakthrough_potential)} text-xs bg-neural/10 px-1 rounded`}>
-                               BT:{answer.judge_scores.breakthrough_potential}
-                             </span>
-                           )}
-                        </div>
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-base leading-relaxed whitespace-pre-wrap">{answer.answer_text}</p>
-                    {showScores && answer.judge_scores && (
-                      <div className="mt-4 p-3 bg-muted/50 rounded-lg">
-                        <p className="text-xs text-muted-foreground">{answer.judge_scores.explanation}</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="exploration" className="flex items-center gap-2">
+                  <List className="h-4 w-4" />
+                  Exploration
+                </TabsTrigger>
+                <TabsTrigger value="analytics" className="flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4" />
+                  Analytics
+                </TabsTrigger>
+                <TabsTrigger value="autorun" className="flex items-center gap-2">
+                  <Zap className="h-4 w-4" />
+                  Auto-Run
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="exploration" className="space-y-4">
+                <SearchAndFilter
+                  searchTerm={searchTerm}
+                  onSearchChange={setSearchTerm}
+                  scoreFilter={scoreFilter}
+                  onScoreFilterChange={setScoreFilter}
+                  bookmarkedOnly={bookmarkedOnly}
+                  onBookmarkedOnlyChange={setBookmarkedOnly}
+                  totalResults={answers.length}
+                  filteredResults={filteredAnswers.length}
+                />
+
+                <div className="space-y-4">
+                  {filteredAnswers.map((answer, index) => (
+                    <CollapsibleStep
+                      key={answer.id}
+                      answer={answer}
+                      showScores={showScores}
+                      isBookmarked={bookmarkedSteps.has(answer.id)}
+                      onToggleBookmark={toggleBookmark}
+                      defaultExpanded={index >= Math.max(0, filteredAnswers.length - 2)}
+                    />
+                  ))}
+                  {filteredAnswers.length === 0 && answers.length > 0 && (
+                    <Card className="p-6 text-center">
+                      <p className="text-muted-foreground">No steps match your current filters.</p>
+                    </Card>
+                  )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="analytics">
+                <AnalyticsDashboard answers={answers} />
+              </TabsContent>
+
+              <TabsContent value="autorun">
+                <AutoRunControls
+                  isProcessing={isProcessing}
+                  onGenerateStep={generateNextStep}
+                  currentStep={currentRabbitHole.total_steps}
+                  isAutoRunning={isAutoRunning}
+                  onAutoRunChange={setIsAutoRunning}
+                />
+              </TabsContent>
+            </Tabs>
 
             {/* Next Step Button */}
             {currentRabbitHole.status === 'active' && (
