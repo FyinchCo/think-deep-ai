@@ -54,11 +54,41 @@ const CognitiveLab = () => {
     "What role should suffering play in human existence and personal growth?"
   ];
 
+  // Load recent session on mount
+  useEffect(() => {
+    loadRecentSession();
+  }, []);
+
   useEffect(() => {
     if (currentRabbitHole) {
       loadAnswers();
     }
   }, [currentRabbitHole]);
+
+  const loadRecentSession = async () => {
+    try {
+      const { data: recentHoles, error } = await supabase
+        .from('rabbit_holes')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error) throw error;
+
+      if (recentHoles && recentHoles.length > 0) {
+        const recentHole = recentHoles[0];
+        setCurrentRabbitHole(recentHole);
+        setQuestion(recentHole.initial_question);
+        
+        toast({
+          title: 'Session Restored',
+          description: `Continuing from step ${recentHole.total_steps}`,
+        });
+      }
+    } catch (error) {
+      console.error('Error loading recent session:', error);
+    }
+  };
 
   const loadAnswers = async () => {
     if (!currentRabbitHole) return;
