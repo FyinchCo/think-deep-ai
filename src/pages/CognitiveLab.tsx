@@ -414,12 +414,12 @@ const CognitiveLab = () => {
                     </Badge>
                   </div>
                 </div>
-                <div className="flex items-center justify-between mt-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-4">
                   <div className="flex items-center gap-4">
                     <Badge variant="outline">{currentRabbitHole.total_steps} steps</Badge>
                     <Badge variant="outline">{currentRabbitHole.domain}</Badge>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Button
                       variant="outline"
                       size="sm"
