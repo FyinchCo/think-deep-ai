@@ -42,6 +42,15 @@ interface VectorSimilarityResult {
   domain: string;
 }
 
+interface CoherenceMetrics {
+  metaphorDensity: number;
+  conceptualComplexity: number;
+  semanticSimilarity: number;
+  saturationRisk: 'low' | 'medium' | 'high';
+  shouldPromptConclusion: boolean;
+  recommendation: string;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -185,6 +194,10 @@ async function handleNextStep(rabbit_hole_id: string) {
   const pressureConfig = await calculateCognitivePressure(rabbit_hole_id, lastAnswer.step_number + 1, rabbitHole.domain);
   console.log('Pressure config calculated:', JSON.stringify(pressureConfig));
 
+  // Check coherence metrics to detect saturation
+  const coherenceMetrics = await calculateCoherenceMetrics(rabbit_hole_id, lastAnswer.step_number + 1);
+  console.log('Coherence metrics:', JSON.stringify(coherenceMetrics));
+
   let retryCount = 0;
   const maxRetries = 3;
 
@@ -198,7 +211,8 @@ async function handleNextStep(rabbit_hole_id: string) {
         step_number: lastAnswer.step_number + 1,
         domain: rabbitHole.domain,
         retry_feedback: retryCount > 0 ? 'Previous attempt was rejected. Focus on adding genuine new insights.' : null,
-        pressure_config: pressureConfig
+        pressure_config: pressureConfig,
+        coherence_metrics: coherenceMetrics
       });
 
       // Check global novelty with vector similarity
@@ -355,13 +369,14 @@ Your response should be thoughtful, substantive (2-4 paragraphs), and represent 
   };
 }
 
-async function generateNextAnswer({ initial_question, previous_answer, step_number, domain, retry_feedback, pressure_config }: {
+async function generateNextAnswer({ initial_question, previous_answer, step_number, domain, retry_feedback, pressure_config, coherence_metrics }: {
   initial_question: string;
   previous_answer: string;
   step_number: number;
   domain: string;
   retry_feedback?: string | null;
   pressure_config: PressureConfig;
+  coherence_metrics?: CoherenceMetrics;
 }) {
   const pressureInstructions = pressure_config.cognitive_intensity > 0.7 
     ? `\n\nCOGNITIVE PRESSURE APPLIED (Level ${pressure_config.cognitive_intensity.toFixed(1)}): You are operating under heightened intellectual demands. This step will be judged against breakthrough-level standards. Seek paradigm-shifting insights that transcend conventional reasoning.`
@@ -370,6 +385,14 @@ async function generateNextAnswer({ initial_question, previous_answer, step_numb
   const noveltyBoost = pressure_config.novelty_pressure > 0.8 
     ? '\n7. **Paradigm Challenge**: Question fundamental assumptions underlying previous steps'
     : '';
+
+  // Add coherence guidance based on saturation risk
+  let coherenceGuidance = '';
+  if (coherence_metrics?.saturationRisk === 'high') {
+    coherenceGuidance = `\n\nCOHERENCE ALERT: ${coherence_metrics.recommendation}. Consider grounding abstract concepts in concrete examples or practical applications.`;
+  } else if (coherence_metrics?.saturationRisk === 'medium') {
+    coherenceGuidance = `\n\nCOHERENCE NOTE: Moderate conceptual density detected. Ensure new insights add practical value rather than just conceptual complexity.`;
+  }
 
   const prompt = `You are an expert in ${domain} engaged in deep intellectual exploration. This is step ${step_number} of an ongoing investigation.
 
@@ -397,7 +420,7 @@ PROHIBITED ACTIONS:
 - Simply expanding without adding new depth
 - Accepting conventional wisdom without challenge
 
-Your response should reveal a NEW layer of understanding that builds on what came before while advancing the exploration meaningfully.${pressureInstructions}`;
+Your response should reveal a NEW layer of understanding that builds on what came before while advancing the exploration meaningfully.${pressureInstructions}${coherenceGuidance}`;
 
   const response = await callAI(prompt, 0.7);
 
@@ -850,4 +873,121 @@ async function calculateCognitivePressure(rabbit_hole_id: string, step_number: n
       stagnation_detection: false
     };
   }
+}
+
+async function calculateCoherenceMetrics(rabbit_hole_id: string, step_number: number): Promise<CoherenceMetrics> {
+  try {
+    // Get recent answers for analysis
+    const { data: recentAnswers } = await supabase
+      .from('answers')
+      .select('answer_text, judge_scores')
+      .eq('rabbit_hole_id', rabbit_hole_id)
+      .eq('is_valid', true)
+      .order('step_number', { ascending: true })
+      .limit(5);
+
+    if (!recentAnswers || recentAnswers.length === 0) {
+      return {
+        metaphorDensity: 0,
+        conceptualComplexity: 0,
+        semanticSimilarity: 0,
+        saturationRisk: 'low',
+        shouldPromptConclusion: false,
+        recommendation: ''
+      };
+    }
+
+    const latestAnswer = recentAnswers[recentAnswers.length - 1];
+    
+    // Calculate metaphor density
+    const metaphorKeywords = [
+      'epistemic', 'ontological', 'meta-', 'shadow', 'mirror', 'gravity', 
+      'friction', 'resonance', 'decay', 'camouflage', 'wildfire', 'echo',
+      'paradigm', 'framework', 'spectrum', 'gradient', 'field'
+    ];
+
+    const metaphorCount = metaphorKeywords.reduce((count, keyword) => {
+      return count + (latestAnswer.answer_text.toLowerCase().split(keyword).length - 1);
+    }, 0);
+
+    const metaphorDensity = metaphorCount / (latestAnswer.answer_text.length / 1000);
+
+    // Calculate conceptual complexity (quoted terms, bold terms)
+    const newConceptPattern = /"([^"]+)"|'([^']+)'|\*\*([^*]+)\*\*/g;
+    const conceptMatches = latestAnswer.answer_text.match(newConceptPattern) || [];
+    const conceptualComplexity = conceptMatches.length;
+
+    // Calculate semantic similarity with previous steps
+    const semanticSimilarity = calculateTextSimilarity(recentAnswers);
+
+    // Assess saturation risk
+    let riskScore = 0;
+    if (metaphorDensity > 8) riskScore += 2;
+    else if (metaphorDensity > 5) riskScore += 1;
+
+    if (conceptualComplexity > 4) riskScore += 2;
+    else if (conceptualComplexity > 2) riskScore += 1;
+
+    if (semanticSimilarity > 0.7) riskScore += 2;
+    else if (semanticSimilarity > 0.5) riskScore += 1;
+
+    const saturationRisk = riskScore >= 4 ? 'high' : riskScore >= 2 ? 'medium' : 'low';
+
+    // Determine if should prompt conclusion
+    const shouldPromptConclusion = (saturationRisk === 'high' && step_number > 30) ||
+                                  (saturationRisk === 'medium' && step_number > 40);
+
+    // Generate recommendation
+    let recommendation = '';
+    if (shouldPromptConclusion) {
+      recommendation = 'Consider concluding exploration - conceptual saturation detected';
+    } else if (saturationRisk === 'high') {
+      recommendation = 'High metaphor density detected - consider grounding in concrete examples';
+    } else if (semanticSimilarity > 0.7) {
+      recommendation = 'High semantic similarity - consider introducing new perspectives';
+    }
+
+    return {
+      metaphorDensity,
+      conceptualComplexity,
+      semanticSimilarity,
+      saturationRisk,
+      shouldPromptConclusion,
+      recommendation
+    };
+  } catch (error) {
+    console.error('Error calculating coherence metrics:', error);
+    return {
+      metaphorDensity: 0,
+      conceptualComplexity: 0,
+      semanticSimilarity: 0,
+      saturationRisk: 'low',
+      shouldPromptConclusion: false,
+      recommendation: ''
+    };
+  }
+}
+
+function calculateTextSimilarity(answers: any[]): number {
+  if (answers.length < 2) return 0;
+  
+  const getKeywords = (text: string) => {
+    return text.toLowerCase()
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter(word => word.length > 4);
+  };
+
+  const lastAnswer = answers[answers.length - 1];
+  const lastKeywords = new Set(getKeywords(lastAnswer.answer_text));
+  
+  const previousKeywords = new Set();
+  answers.slice(-4, -1).forEach(answer => {
+    getKeywords(answer.answer_text).forEach(keyword => previousKeywords.add(keyword));
+  });
+
+  const intersection = new Set([...lastKeywords].filter(x => previousKeywords.has(x)));
+  const union = new Set([...lastKeywords, ...previousKeywords]);
+  
+  return union.size > 0 ? intersection.size / union.size : 0;
 }

@@ -12,6 +12,7 @@ import { ExportTools } from '@/components/cognitive-lab/ExportTools';
 import { AutoRunControls } from '@/components/cognitive-lab/AutoRunControls';
 import { AnalyticsDashboard } from '@/components/cognitive-lab/AnalyticsDashboard';
 import { SearchAndFilter } from '@/components/cognitive-lab/SearchAndFilter';
+import { CoherenceMonitor } from '@/components/cognitive-lab/CoherenceMonitor';
 
 interface Answer {
   id: string;
@@ -465,6 +466,11 @@ const CognitiveLab = () => {
                   onBookmarkedOnlyChange={setBookmarkedOnly}
                   totalResults={answers.length}
                   filteredResults={filteredAnswers.length}
+                />
+
+                <CoherenceMonitor 
+                  answers={answers}
+                  currentStep={currentRabbitHole.total_steps}
                 />
 
                 <div className="space-y-4">
