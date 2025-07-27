@@ -147,7 +147,6 @@ serve(async (req) => {
       .from('rabbit_holes')
       .update({
         total_steps: nextStepNumber,
-        last_updated_at: new Date().toISOString(),
         status: 'active'
       })
       .eq('id', rabbit_hole_id);
