@@ -159,7 +159,7 @@ Deno.serve(async (req) => {
       .from('rabbit_holes')
       .update({ 
         status: 'active',
-        updated_at: new Date().toISOString()
+        last_updated_at: new Date().toISOString()
       })
       .eq('id', rabbit_hole_id);
 
