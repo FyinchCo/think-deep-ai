@@ -13,22 +13,24 @@ interface AutoRunControlsProps {
   isProcessing: boolean;
   onGenerateStep: () => Promise<void>;
   onGeneratePanelStep: () => Promise<void>;
+  onGenerateGroundingStep: () => Promise<void>;
   currentStep: number;
   isAutoRunning: boolean;
   onAutoRunChange: (running: boolean) => void;
-  isPanelMode: boolean;
-  onPanelModeChange: (panelMode: boolean) => void;
+  generationMode: 'single' | 'exploration' | 'grounding';
+  onGenerationModeChange: (mode: 'single' | 'exploration' | 'grounding') => void;
 }
 
 export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
   isProcessing,
   onGenerateStep,
   onGeneratePanelStep,
+  onGenerateGroundingStep,
   currentStep,
   isAutoRunning,
   onAutoRunChange,
-  isPanelMode,
-  onPanelModeChange
+  generationMode,
+  onGenerationModeChange
 }) => {
   const [targetSteps, setTargetSteps] = useState(5);
   const [delayBetweenSteps, setDelayBetweenSteps] = useState(3);
@@ -42,8 +44,10 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
     if (isAutoRunning && !isProcessing) {
       if (stepsCompleted < targetSteps) {
         interval = setTimeout(async () => {
-          if (isPanelMode) {
+          if (generationMode === 'exploration') {
             await onGeneratePanelStep();
+          } else if (generationMode === 'grounding') {
+            await onGenerateGroundingStep();
           } else {
             await onGenerateStep();
           }
@@ -99,21 +103,54 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
         <Collapsible open={showSettings} onOpenChange={setShowSettings}>
           <CollapsibleContent className="space-y-4 pb-4">
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 border rounded-lg border-neural/20">
-                <div className="space-y-1">
-                  <Label className="text-sm font-medium">Generation Mode</Label>
-                  <p className="text-xs text-muted-foreground">
-                    {isPanelMode ? 'Multi-Agent Panel: 5 specialized agents debate and synthesize responses' : 'Single Perspective: Traditional single-agent exploration'}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">Single</span>
-                  <Switch
-                    checked={isPanelMode}
-                    onCheckedChange={onPanelModeChange}
-                    disabled={isAutoRunning}
-                  />
-                  <span className="text-xs text-muted-foreground">Panel</span>
+              <div className="space-y-3 p-3 border rounded-lg border-neural/20">
+                <Label className="text-sm font-medium">Generation Mode</Label>
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="radio"
+                      id="single-mode"
+                      value="single"
+                      checked={generationMode === 'single'}
+                      onChange={() => onGenerationModeChange('single')}
+                      disabled={isAutoRunning}
+                      className="w-4 h-4"
+                    />
+                    <div className="space-y-1">
+                      <Label htmlFor="single-mode" className="text-sm font-medium cursor-pointer">Single Perspective</Label>
+                      <p className="text-xs text-muted-foreground">Traditional single-agent exploration</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="radio"
+                      id="exploration-mode"
+                      value="exploration"
+                      checked={generationMode === 'exploration'}
+                      onChange={() => onGenerationModeChange('exploration')}
+                      disabled={isAutoRunning}
+                      className="w-4 h-4"
+                    />
+                    <div className="space-y-1">
+                      <Label htmlFor="exploration-mode" className="text-sm font-medium cursor-pointer">Exploration Panel</Label>
+                      <p className="text-xs text-muted-foreground">Multi-agent philosophical debate for deep exploration</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="radio"
+                      id="grounding-mode"
+                      value="grounding"
+                      checked={generationMode === 'grounding'}
+                      onChange={() => onGenerationModeChange('grounding')}
+                      disabled={isAutoRunning}
+                      className="w-4 h-4"
+                    />
+                    <div className="space-y-1">
+                      <Label htmlFor="grounding-mode" className="text-sm font-medium cursor-pointer">Grounding Panel</Label>
+                      <p className="text-xs text-muted-foreground">Multi-agent focus on practical clarity and real-world applications</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -171,10 +208,10 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
                   className="flex-1"
                 >
                   <Play className="h-4 w-4 mr-2" />
-                  Start Auto-Run ({isPanelMode ? 'Panel' : 'Single'})
+                  Start Auto-Run ({generationMode === 'exploration' ? 'Exploration' : generationMode === 'grounding' ? 'Grounding' : 'Single'})
                 </Button>
                 <Button
-                  onClick={isPanelMode ? onGeneratePanelStep : onGenerateStep}
+                  onClick={generationMode === 'exploration' ? onGeneratePanelStep : generationMode === 'grounding' ? onGenerateGroundingStep : onGenerateStep}
                   disabled={isProcessing}
                   variant="outline"
                   size="sm"
@@ -206,7 +243,7 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Auto-run will generate {targetSteps} {isPanelMode ? 'panel-debated' : 'single-perspective'} steps with {delayBetweenSteps} second delays between each step.
+          Auto-run will generate {targetSteps} {generationMode === 'exploration' ? 'exploration panel' : generationMode === 'grounding' ? 'grounding panel' : 'single-perspective'} steps with {delayBetweenSteps} second delays between each step.
         </p>
       </CardContent>
     </Card>

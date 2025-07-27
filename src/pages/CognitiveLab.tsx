@@ -48,7 +48,7 @@ const CognitiveLab = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showScores, setShowScores] = useState(false);
   const [isAutoRunning, setIsAutoRunning] = useState(false);
-  const [isPanelMode, setIsPanelMode] = useState(false);
+  const [generationMode, setGenerationMode] = useState<'single' | 'exploration' | 'grounding'>('single');
   const [bookmarkedSteps, setBookmarkedSteps] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [scoreFilter, setScoreFilter] = useState('all');
@@ -197,8 +197,10 @@ const CognitiveLab = () => {
       setCurrentRabbitHole(rabbitHole);
 
       // Generate first step based on selected mode
-      const functionName = isPanelMode ? 'panel-step' : 'rabbit-hole-step';
-      const body = isPanelMode 
+      const functionName = generationMode === 'exploration' ? 'panel-step' : 
+                       generationMode === 'grounding' ? 'grounding-panel-step' : 
+                       'rabbit-hole-step';
+      const body = generationMode !== 'single' 
         ? { rabbit_hole_id: rabbitHole.id }
         : { rabbit_hole_id: rabbitHole.id, action_type: 'start' };
       
@@ -223,8 +225,10 @@ const CognitiveLab = () => {
         
         toast({
           title: 'Success!',
-          description: isPanelMode 
-            ? 'Your multi-agent philosophical exploration has begun' 
+          description: generationMode === 'exploration'
+            ? 'Your multi-agent philosophical exploration has begun'
+            : generationMode === 'grounding'
+            ? 'Your multi-agent grounding exploration has begun'
             : 'Your philosophical exploration has begun',
         });
       } else {
@@ -259,8 +263,8 @@ const CognitiveLab = () => {
       if (error) {
         console.error('Panel step generation error:', error);
         toast({
-          title: "Panel Generation Failed",
-          description: error.message || "Failed to generate panel step",
+          title: "Exploration Panel Failed",
+          description: error.message || "Failed to generate exploration panel step",
           variant: "destructive",
         });
         return;
@@ -280,15 +284,65 @@ const CognitiveLab = () => {
         } : null);
         
         toast({
-          title: "Panel Step Generated",
-          description: `Multi-agent panel debate completed for step ${data.answer.step_number}`,
+          title: "Exploration Panel Generated",
+          description: `Multi-agent exploration debate completed for step ${data.answer.step_number}`,
         });
       }
     } catch (error) {
-      console.error('Panel step error:', error);
+      console.error('Exploration panel error:', error);
       toast({
-        title: "Panel Generation Error",
-        description: "An unexpected error occurred during panel generation",
+        title: "Exploration Panel Error",
+        description: "An unexpected error occurred during exploration panel generation",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const generateGroundingStep = async () => {
+    if (!currentRabbitHole || isProcessing) return;
+
+    setIsProcessing(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('grounding-panel-step', {
+        body: { rabbit_hole_id: currentRabbitHole.id }
+      });
+
+      if (error) {
+        console.error('Grounding panel generation error:', error);
+        toast({
+          title: "Grounding Panel Failed",
+          description: error.message || "Failed to generate grounding panel step",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (data?.success && data?.answer) {
+        // Force a small delay to ensure database consistency
+        setTimeout(async () => {
+          await loadAnswers();
+        }, 1000);
+        
+        // Update rabbit hole stats
+        setCurrentRabbitHole(prev => prev ? {
+          ...prev,
+          total_steps: data.answer.step_number,
+          status: 'active'
+        } : null);
+        
+        toast({
+          title: "Grounding Panel Generated",
+          description: `Multi-agent grounding synthesis completed for step ${data.answer.step_number}`,
+        });
+      }
+    } catch (error) {
+      console.error('Grounding panel error:', error);
+      toast({
+        title: "Grounding Panel Error",
+        description: "An unexpected error occurred during grounding panel generation",
         variant: "destructive",
       });
     } finally {
@@ -580,23 +634,54 @@ END OF REPORT
                 </div>
               </div>
 
-              {/* Generation Mode Toggle */}
-              <div className="p-4 border rounded-lg border-neural/20 bg-gradient-to-r from-background to-neural/5">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <Label className="text-sm font-medium">Generation Mode</Label>
-                    <p className="text-xs text-muted-foreground">
-                      {isPanelMode ? 'Multi-Agent Panel: 5 specialized agents will debate and synthesize the initial response' : 'Single Perspective: Traditional single-agent exploration approach'}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">Single</span>
-                    <Switch
-                      checked={isPanelMode}
-                      onCheckedChange={setIsPanelMode}
+              {/* Generation Mode Selection */}
+              <div className="space-y-3 p-4 border rounded-lg border-neural/20 bg-gradient-to-r from-background to-neural/5">
+                <Label className="text-sm font-medium">Generation Mode</Label>
+                <div className="space-y-3">
+                  <div className="flex items-start space-x-3">
+                    <input
+                      type="radio"
+                      id="initial-single-mode"
+                      value="single"
+                      checked={generationMode === 'single'}
+                      onChange={() => setGenerationMode('single')}
                       disabled={isProcessing}
+                      className="w-4 h-4 mt-1"
                     />
-                    <span className="text-xs text-muted-foreground">Panel</span>
+                    <div className="space-y-1">
+                      <Label htmlFor="initial-single-mode" className="text-sm font-medium cursor-pointer">Single Perspective</Label>
+                      <p className="text-xs text-muted-foreground">Traditional single-agent exploration approach</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <input
+                      type="radio"
+                      id="initial-exploration-mode"
+                      value="exploration"
+                      checked={generationMode === 'exploration'}
+                      onChange={() => setGenerationMode('exploration')}
+                      disabled={isProcessing}
+                      className="w-4 h-4 mt-1"
+                    />
+                    <div className="space-y-1">
+                      <Label htmlFor="initial-exploration-mode" className="text-sm font-medium cursor-pointer">Exploration Panel</Label>
+                      <p className="text-xs text-muted-foreground">Multi-agent philosophical debate for deep exploration</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <input
+                      type="radio"
+                      id="initial-grounding-mode"
+                      value="grounding"
+                      checked={generationMode === 'grounding'}
+                      onChange={() => setGenerationMode('grounding')}
+                      disabled={isProcessing}
+                      className="w-4 h-4 mt-1"
+                    />
+                    <div className="space-y-1">
+                      <Label htmlFor="initial-grounding-mode" className="text-sm font-medium cursor-pointer">Grounding Panel</Label>
+                      <p className="text-xs text-muted-foreground">Multi-agent focus on practical clarity and real-world applications</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -610,12 +695,16 @@ END OF REPORT
                 {isProcessing ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    {isPanelMode ? 'Initiating Panel Debate...' : 'Generating Initial Insight...'}
+                    {generationMode === 'exploration' ? 'Initiating Exploration Panel...' : 
+                     generationMode === 'grounding' ? 'Initiating Grounding Panel...' : 
+                     'Generating Initial Insight...'}
                   </>
                 ) : (
                   <>
                     <Brain className="h-4 w-4 mr-2" />
-                    Begin Exploration ({isPanelMode ? 'Panel Mode' : 'Single Mode'})
+                    Begin Exploration ({generationMode === 'exploration' ? 'Exploration Panel' : 
+                                      generationMode === 'grounding' ? 'Grounding Panel' : 
+                                      'Single Perspective'})
                   </>
                 )}
               </Button>
@@ -789,40 +878,82 @@ END OF REPORT
                   isProcessing={isProcessing}
                   onGenerateStep={generateNextStep}
                   onGeneratePanelStep={generatePanelStep}
+                  onGenerateGroundingStep={generateGroundingStep}
                   currentStep={currentRabbitHole.total_steps}
                   isAutoRunning={isAutoRunning}
                   onAutoRunChange={setIsAutoRunning}
-                  isPanelMode={isPanelMode}
-                  onPanelModeChange={setIsPanelMode}
+                  generationMode={generationMode}
+                  onGenerationModeChange={setGenerationMode}
                 />
               </TabsContent>
             </Tabs>
 
-            {/* Next Step Button */}
+            {/* Generation Options */}
             {currentRabbitHole.status === 'active' && (
               <Card className="border-2 border-dashed border-neural/30">
-                <CardContent className="p-6 text-center">
-                  <Button
-                    onClick={generateNextStep}
-                    disabled={isProcessing}
-                    className="bg-gradient-to-r from-neural to-neural-secondary hover:from-neural-secondary hover:to-neural-accent shadow-[var(--shadow-neural)]"
-                    size="lg"
-                  >
-                    {isProcessing ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Generating Next Insight...
-                      </>
-                    ) : (
-                      <>
-                        <Zap className="h-4 w-4 mr-2" />
-                        Generate Next Step
-                      </>
-                    )}
-                  </Button>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    AI will build meaningfully upon the previous insight
-                  </p>
+                <CardContent className="p-6">
+                  <div className="text-center mb-4">
+                    <h3 className="font-semibold mb-2">Generate Next Step</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Choose your preferred generation approach
+                    </p>
+                  </div>
+                  
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <Button
+                      onClick={generateNextStep}
+                      disabled={isProcessing}
+                      variant="outline"
+                      className="h-auto p-4 flex flex-col items-start space-y-2 text-left"
+                    >
+                      <div className="flex items-center gap-2 w-full">
+                        <Brain className="h-4 w-4" />
+                        <span className="font-medium">Single Perspective</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        Traditional single-agent step
+                      </span>
+                    </Button>
+                    
+                    <Button
+                      onClick={generatePanelStep}
+                      disabled={isProcessing}
+                      variant="outline"
+                      className="h-auto p-4 flex flex-col items-start space-y-2 text-left"
+                    >
+                      <div className="flex items-center gap-2 w-full">
+                        <Target className="h-4 w-4" />
+                        <span className="font-medium">Exploration Panel</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        Multi-agent philosophical debate
+                      </span>
+                    </Button>
+                    
+                    <Button
+                      onClick={generateGroundingStep}
+                      disabled={isProcessing}
+                      variant="outline"
+                      className="h-auto p-4 flex flex-col items-start space-y-2 text-left"
+                    >
+                      <div className="flex items-center gap-2 w-full">
+                        <CheckCircle className="h-4 w-4" />
+                        <span className="font-medium">Grounding Panel</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        Multi-agent practical clarity
+                      </span>
+                    </Button>
+                  </div>
+                  
+                  {isProcessing && (
+                    <div className="mt-4 text-center">
+                      <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Generating insight...
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
