@@ -5,6 +5,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Brain, Zap, Target, CheckCircle, XCircle, RotateCcw, List, BarChart3, Eye, EyeOff, Download, FileText } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { CollapsibleStep } from '@/components/cognitive-lab/CollapsibleStep';
@@ -194,13 +196,13 @@ const CognitiveLab = () => {
 
       setCurrentRabbitHole(rabbitHole);
 
-      // Generate first step
-      const response = await supabase.functions.invoke('rabbit-hole-step', {
-        body: { 
-          rabbit_hole_id: rabbitHole.id, 
-          action_type: 'start' 
-        },
-      });
+      // Generate first step based on selected mode
+      const functionName = isPanelMode ? 'panel-step' : 'rabbit-hole-step';
+      const body = isPanelMode 
+        ? { rabbit_hole_id: rabbitHole.id }
+        : { rabbit_hole_id: rabbitHole.id, action_type: 'start' };
+      
+      const response = await supabase.functions.invoke(functionName, { body });
 
       if (response.error) throw response.error;
 
@@ -221,7 +223,9 @@ const CognitiveLab = () => {
         
         toast({
           title: 'Success!',
-          description: 'Your philosophical exploration has begun',
+          description: isPanelMode 
+            ? 'Your multi-agent philosophical exploration has begun' 
+            : 'Your philosophical exploration has begun',
         });
       } else {
         toast({
@@ -576,6 +580,27 @@ END OF REPORT
                 </div>
               </div>
 
+              {/* Generation Mode Toggle */}
+              <div className="p-4 border rounded-lg border-neural/20 bg-gradient-to-r from-background to-neural/5">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium">Generation Mode</Label>
+                    <p className="text-xs text-muted-foreground">
+                      {isPanelMode ? 'Multi-Agent Panel: 5 specialized agents will debate and synthesize the initial response' : 'Single Perspective: Traditional single-agent exploration approach'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Single</span>
+                    <Switch
+                      checked={isPanelMode}
+                      onCheckedChange={setIsPanelMode}
+                      disabled={isProcessing}
+                    />
+                    <span className="text-xs text-muted-foreground">Panel</span>
+                  </div>
+                </div>
+              </div>
+
               <Button
                 onClick={startRabbitHole}
                 disabled={isProcessing || !question.trim()}
@@ -585,12 +610,12 @@ END OF REPORT
                 {isProcessing ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Generating Initial Insight...
+                    {isPanelMode ? 'Initiating Panel Debate...' : 'Generating Initial Insight...'}
                   </>
                 ) : (
                   <>
                     <Brain className="h-4 w-4 mr-2" />
-                    Begin Exploration
+                    Begin Exploration ({isPanelMode ? 'Panel Mode' : 'Single Mode'})
                   </>
                 )}
               </Button>
