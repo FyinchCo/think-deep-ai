@@ -108,7 +108,9 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to fetch previous answers: ${answersError.message}`);
     }
 
-    const lastStepNumber = Math.max(...(previousAnswers?.map(a => a.step_number) || [0]));
+    const lastStepNumber = previousAnswers?.length > 0 
+      ? Math.max(...previousAnswers.map(a => a.step_number))
+      : 0;
     const nextStepNumber = lastStepNumber + 1;
 
     // Build context from previous answers
