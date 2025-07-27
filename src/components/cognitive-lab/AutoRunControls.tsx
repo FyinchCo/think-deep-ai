@@ -7,21 +7,28 @@ import { Progress } from '@/components/ui/progress';
 import { Play, Pause, Square, Settings } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 
 interface AutoRunControlsProps {
   isProcessing: boolean;
   onGenerateStep: () => Promise<void>;
+  onGeneratePanelStep: () => Promise<void>;
   currentStep: number;
   isAutoRunning: boolean;
   onAutoRunChange: (running: boolean) => void;
+  isPanelMode: boolean;
+  onPanelModeChange: (panelMode: boolean) => void;
 }
 
 export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
   isProcessing,
   onGenerateStep,
+  onGeneratePanelStep,
   currentStep,
   isAutoRunning,
-  onAutoRunChange
+  onAutoRunChange,
+  isPanelMode,
+  onPanelModeChange
 }) => {
   const [targetSteps, setTargetSteps] = useState(5);
   const [delayBetweenSteps, setDelayBetweenSteps] = useState(3);
@@ -35,7 +42,11 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
     if (isAutoRunning && !isProcessing) {
       if (stepsCompleted < targetSteps) {
         interval = setTimeout(async () => {
-          await onGenerateStep();
+          if (isPanelMode) {
+            await onGeneratePanelStep();
+          } else {
+            await onGenerateStep();
+          }
           setStepsCompleted(prev => prev + 1);
         }, delayBetweenSteps * 1000);
       } else {
@@ -87,6 +98,25 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
       <CardContent className="space-y-4">
         <Collapsible open={showSettings} onOpenChange={setShowSettings}>
           <CollapsibleContent className="space-y-4 pb-4">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-3 border rounded-lg border-neural/20">
+                <div className="space-y-1">
+                  <Label className="text-sm font-medium">Generation Mode</Label>
+                  <p className="text-xs text-muted-foreground">
+                    {isPanelMode ? 'Multi-Agent Panel: 5 specialized agents debate and synthesize responses' : 'Single Perspective: Traditional single-agent exploration'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Single</span>
+                  <Switch
+                    checked={isPanelMode}
+                    onCheckedChange={onPanelModeChange}
+                    disabled={isAutoRunning}
+                  />
+                  <span className="text-xs text-muted-foreground">Panel</span>
+                </div>
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="targetSteps">Target Steps</Label>
@@ -131,17 +161,28 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
           </div>
         )}
 
-        <div className="flex gap-2">
-          {!isAutoRunning ? (
-            <Button
-              onClick={startAutoRun}
-              disabled={isProcessing}
-              className="flex-1"
-            >
-              <Play className="h-4 w-4 mr-2" />
-              Start Auto-Run
-            </Button>
-          ) : (
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            {!isAutoRunning ? (
+              <>
+                <Button
+                  onClick={startAutoRun}
+                  disabled={isProcessing}
+                  className="flex-1"
+                >
+                  <Play className="h-4 w-4 mr-2" />
+                  Start Auto-Run ({isPanelMode ? 'Panel' : 'Single'})
+                </Button>
+                <Button
+                  onClick={isPanelMode ? onGeneratePanelStep : onGenerateStep}
+                  disabled={isProcessing}
+                  variant="outline"
+                  size="sm"
+                >
+                  Generate 1 Step
+                </Button>
+              </>
+            ) : (
             <>
               <Button
                 onClick={pauseAutoRun}
@@ -159,12 +200,13 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
                 <Square className="h-4 w-4 mr-2" />
                 Stop
               </Button>
-            </>
-          )}
+              </>
+            )}
+          </div>
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Auto-run will generate {targetSteps} steps with {delayBetweenSteps} second delays between each step.
+          Auto-run will generate {targetSteps} {isPanelMode ? 'panel-debated' : 'single-perspective'} steps with {delayBetweenSteps} second delays between each step.
         </p>
       </CardContent>
     </Card>

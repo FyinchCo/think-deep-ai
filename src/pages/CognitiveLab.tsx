@@ -46,6 +46,7 @@ const CognitiveLab = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showScores, setShowScores] = useState(false);
   const [isAutoRunning, setIsAutoRunning] = useState(false);
+  const [isPanelMode, setIsPanelMode] = useState(false);
   const [bookmarkedSteps, setBookmarkedSteps] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [scoreFilter, setScoreFilter] = useState('all');
@@ -235,6 +236,56 @@ const CognitiveLab = () => {
         title: 'Error',
         description: 'Failed to start exploration',
         variant: 'destructive',
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const generatePanelStep = async () => {
+    if (!currentRabbitHole || isProcessing) return;
+
+    setIsProcessing(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('panel-step', {
+        body: { rabbit_hole_id: currentRabbitHole.id }
+      });
+
+      if (error) {
+        console.error('Panel step generation error:', error);
+        toast({
+          title: "Panel Generation Failed",
+          description: error.message || "Failed to generate panel step",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (data?.success && data?.answer) {
+        // Force a small delay to ensure database consistency
+        setTimeout(async () => {
+          await loadAnswers();
+        }, 1000);
+        
+        // Update rabbit hole stats
+        setCurrentRabbitHole(prev => prev ? {
+          ...prev,
+          total_steps: data.answer.step_number,
+          status: 'active'
+        } : null);
+        
+        toast({
+          title: "Panel Step Generated",
+          description: `Multi-agent panel debate completed for step ${data.answer.step_number}`,
+        });
+      }
+    } catch (error) {
+      console.error('Panel step error:', error);
+      toast({
+        title: "Panel Generation Error",
+        description: "An unexpected error occurred during panel generation",
+        variant: "destructive",
       });
     } finally {
       setIsProcessing(false);
@@ -712,9 +763,12 @@ END OF REPORT
                 <AutoRunControls
                   isProcessing={isProcessing}
                   onGenerateStep={generateNextStep}
+                  onGeneratePanelStep={generatePanelStep}
                   currentStep={currentRabbitHole.total_steps}
                   isAutoRunning={isAutoRunning}
                   onAutoRunChange={setIsAutoRunning}
+                  isPanelMode={isPanelMode}
+                  onPanelModeChange={setIsPanelMode}
                 />
               </TabsContent>
             </Tabs>
