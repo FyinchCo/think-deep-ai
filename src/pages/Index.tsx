@@ -2,7 +2,7 @@
 
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Brain, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -17,7 +17,7 @@ const Index = () => {
       <div className="text-center max-w-2xl mx-auto px-4 relative z-10">
         <div className="flex items-center justify-center gap-4 mb-8">
           <div className="p-4 bg-gradient-to-br from-axiom via-axiom-secondary to-axiom-shadow rounded-2xl shadow-[var(--shadow-axiom)] border border-axiom/20">
-            <Brain className="h-14 w-14 text-foreground" />
+            <span className="text-6xl">🪓</span>
           </div>
           <div className="text-left">
             <h1 className="text-5xl font-bold bg-gradient-to-r from-foreground via-axiom-accent to-foreground bg-clip-text text-transparent">
