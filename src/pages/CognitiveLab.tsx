@@ -21,6 +21,7 @@ import { useCoherenceTracking } from "@/hooks/useCoherenceTracking";
 import { useBrillianceDetection } from "@/hooks/useBrillianceDetection";
 import { useMetricTracking } from "@/hooks/useMetricTracking";
 import { BrillianceMonitor } from "@/components/cognitive-lab/BrillianceMonitor";
+import { GlobalBrillianceArchive } from "@/components/cognitive-lab/GlobalBrillianceArchive";
 
 interface Answer {
   id: string;
@@ -869,7 +870,11 @@ END OF REPORT
                 </div>
               </TabsContent>
 
-              <TabsContent value="analytics">
+              <TabsContent value="analytics" className="space-y-6">
+                <GlobalBrillianceArchive 
+                  answers={answers}
+                  currentStep={currentRabbitHole.total_steps}
+                />
                 <AnalyticsDashboard answers={answers} />
               </TabsContent>
 
