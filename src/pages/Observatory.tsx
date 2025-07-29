@@ -149,10 +149,11 @@ const Observatory = () => {
     const depth = answer.judge_scores?.depth || 5;
     const coherence = answer.judge_scores?.coherence || 5;
     
+    // Keep coordinates within a reasonable range (-50 to 50) so they're visible
     return {
-      x: (novelty - 5) * 20 + Math.cos(index * 0.618) * 15,
-      y: (depth - 5) * 20 + Math.sin(index * 0.618) * 15,
-      z: (coherence - 5) * 10 + index * 5
+      x: (novelty - 5) * 10 + Math.cos(index * 0.618) * 20,
+      y: (depth - 5) * 10 + Math.sin(index * 0.618) * 20,
+      z: (coherence - 5) * 5 + index * 3
     };
   };
 
