@@ -126,6 +126,8 @@ const Observatory = () => {
 
       if (error) throw error;
       
+      console.log('Observatory: Raw answers data:', data);
+      
       // Transform answers into observatory thoughts with spatial coordinates
       const transformedThoughts = (data || []).map((answer, index) => ({
         ...answer,
@@ -134,6 +136,7 @@ const Observatory = () => {
         connection_strength: calculateConnectionStrengths(answer, data || [])
       }));
       
+      console.log('Observatory: Transformed thoughts:', transformedThoughts);
       setThoughts(transformedThoughts);
     } catch (error) {
       console.error('Error loading thoughts:', error);
@@ -228,6 +231,34 @@ const Observatory = () => {
       loadThoughts();
     }
   }, [currentExploration]);
+
+  // Load existing active rabbit hole on mount
+  useEffect(() => {
+    const loadExistingRabbitHole = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('rabbit_holes')
+          .select('*')
+          .eq('status', 'active')
+          .eq('domain', 'consciousness')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (error) throw error;
+        
+        if (data) {
+          console.log('Observatory: Found existing rabbit hole:', data);
+          setCurrentExploration(data);
+          setQuestion(data.initial_question);
+        }
+      } catch (error) {
+        console.error('Error loading existing rabbit hole:', error);
+      }
+    };
+
+    loadExistingRabbitHole();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-primary/5 p-6">
