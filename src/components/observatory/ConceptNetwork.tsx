@@ -94,8 +94,8 @@ export const ConceptNetwork: React.FC<ConceptNetworkProps> = ({
         ctx.beginPath();
         ctx.moveTo(x1, y1);
         ctx.lineTo(x2, y2);
-        ctx.strokeStyle = `rgba(139, 92, 246, ${strength * 0.3})`; // Purple with alpha
-        ctx.lineWidth = strength * 3;
+        ctx.strokeStyle = `rgba(139, 92, 246, ${Math.min(strength * 0.3, 1)})`; // Ensure alpha is valid
+        ctx.lineWidth = Math.max(strength * 3, 1);
         ctx.stroke();
       });
     });
@@ -106,7 +106,7 @@ export const ConceptNetwork: React.FC<ConceptNetworkProps> = ({
 
       const x = (thought.conceptual_coordinates.x + 100) * (canvas.width / 200);
       const y = (thought.conceptual_coordinates.y + 100) * (canvas.height / 200);
-      const radius = 8 + (thought.semantic_weight || 0) * 12;
+      const radius = Math.max(8 + (thought.semantic_weight || 0) * 12, 8);
 
       console.log(`ConceptNetwork: Drawing thought ${index} at (${x}, ${y}) with radius ${radius}`);
 
@@ -146,7 +146,8 @@ export const ConceptNetwork: React.FC<ConceptNetworkProps> = ({
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 10px system-ui';
       ctx.textAlign = 'center';
-      ctx.fillText(thought.step_number.toString(), x, y + 3);
+      ctx.textBaseline = 'middle';
+      ctx.fillText(thought.step_number.toString(), x, y);
     });
 
     // Processing indicator
@@ -157,6 +158,7 @@ export const ConceptNetwork: React.FC<ConceptNetworkProps> = ({
       ctx.fillStyle = '#8b5cf6';
       ctx.font = '18px system-ui';
       ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
       ctx.fillText('Consciousness telescope focusing...', canvas.width / 2, canvas.height / 2);
     }
   }, [thoughts, dimensions, selectedThought, hoveredThought, isProcessing]);
