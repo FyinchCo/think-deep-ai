@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Download, FileText, Sparkles } from 'lucide-react';
+import { Download, FileText, Sparkles, Zap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -32,6 +32,9 @@ interface ExportToolsProps {
 export const ExportTools: React.FC<ExportToolsProps> = ({ rabbitHole, answers, globalBrillianceMetrics }) => {
   const { toast } = useToast();
   const [isGeneratingBrilliance, setIsGeneratingBrilliance] = useState(false);
+  const [isGeneratingStatus, setIsGeneratingStatus] = useState(false);
+  const [statusReport, setStatusReport] = useState<string>('');
+  const [compressionLevel, setCompressionLevel] = useState<'atom' | 'micro' | 'brief'>('atom');
 
   const generateReport = () => {
     const date = new Date().toLocaleString();
@@ -535,36 +538,126 @@ Total steps analyzed: ${answers.length}`;
     }
   };
 
+  const generateAtomStatus = async () => {
+    if (!answers.length) {
+      toast({
+        title: "No data to analyze",
+        description: "Please complete some exploration steps first.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsGeneratingStatus(true);
+    
+    try {
+      console.log(`Generating ${compressionLevel} status report...`);
+      
+      const { data, error } = await supabase.functions.invoke('atom-status-engine', {
+        body: {
+          answers,
+          rabbitHole,
+          compressionLevel
+        }
+      });
+
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw new Error(error.message || 'Failed to generate status report');
+      }
+
+      if (!data?.statusReport) {
+        throw new Error('No status report received from AI');
+      }
+
+      setStatusReport(data.statusReport);
+
+      toast({
+        title: "Status Check Complete!",
+        description: `Generated ${compressionLevel} status report at step ${answers.length}`,
+      });
+
+    } catch (error) {
+      console.error('Error generating status report:', error);
+      toast({
+        title: "Status Check Failed",
+        description: error instanceof Error ? error.message : "Failed to generate status report. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGeneratingStatus(false);
+    }
+  };
+
   return (
-    <div className="flex gap-2 flex-wrap">
-      <Button
-        onClick={generateBrillianceCompressionReport}
-        size="sm"
-        variant="default"
-        disabled={isGeneratingBrilliance}
-        className="bg-gradient-primary hover:bg-gradient-primary/90 flex items-center gap-2"
-      >
-        <Sparkles className="h-4 w-4" />
-        {isGeneratingBrilliance ? 'Analyzing...' : 'Export Brilliance Report'}
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={exportProgressSummary}
-        className="flex items-center gap-2"
-      >
-        <Download className="h-4 w-4" />
-        Export Progress Summary
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={exportToTxt}
-        className="flex items-center gap-2"
-      >
-        <FileText className="h-4 w-4" />
-        Export Full Report
-      </Button>
+    <div className="space-y-4">
+      {/* Atom Status Check Section */}
+      <div className="flex flex-col gap-3 p-4 rounded-lg border bg-card">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-medium">Real-Time Status Check</h3>
+          <select 
+            value={compressionLevel} 
+            onChange={(e) => setCompressionLevel(e.target.value as 'atom' | 'micro' | 'brief')}
+            className="text-xs px-2 py-1 rounded border bg-background"
+          >
+            <option value="atom">Atom (1 sentence)</option>
+            <option value="micro">Micro (2-3 sentences)</option>
+            <option value="brief">Brief (1 paragraph)</option>
+          </select>
+        </div>
+        
+        <Button
+          onClick={generateAtomStatus}
+          size="sm"
+          variant="secondary"
+          disabled={isGeneratingStatus}
+          className="flex items-center gap-2 w-full"
+        >
+          <Zap className="h-4 w-4" />
+          {isGeneratingStatus ? 'Checking Status...' : `Check Status (${compressionLevel})`}
+        </Button>
+        
+        {statusReport && (
+          <div className="p-3 rounded-md bg-accent text-accent-foreground text-sm">
+            <div className="font-medium text-xs text-muted-foreground mb-1">
+              Status at Step {answers.length} ({compressionLevel}):
+            </div>
+            {statusReport}
+          </div>
+        )}
+      </div>
+
+      {/* Export Tools Section */}
+      <div className="flex gap-2 flex-wrap">
+        <Button
+          onClick={generateBrillianceCompressionReport}
+          size="sm"
+          variant="default"
+          disabled={isGeneratingBrilliance}
+          className="bg-gradient-primary hover:bg-gradient-primary/90 flex items-center gap-2"
+        >
+          <Sparkles className="h-4 w-4" />
+          {isGeneratingBrilliance ? 'Analyzing...' : 'Export Brilliance Report'}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={exportProgressSummary}
+          className="flex items-center gap-2"
+        >
+          <Download className="h-4 w-4" />
+          Export Progress Summary
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={exportToTxt}
+          className="flex items-center gap-2"
+        >
+          <FileText className="h-4 w-4" />
+          Export Full Report
+        </Button>
+      </div>
     </div>
   );
 };
