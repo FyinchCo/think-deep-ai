@@ -60,13 +60,16 @@ export const ConceptNetwork: React.FC<ConceptNetworkProps> = ({
     canvas.width = dimensions.width;
     canvas.height = dimensions.height;
 
-    // Clear canvas
-    ctx.fillStyle = 'hsl(var(--background))';
+    console.log('ConceptNetwork: Canvas dimensions:', dimensions);
+    console.log('ConceptNetwork: Thoughts to render:', thoughts);
+
+    // Clear canvas with a visible background
+    ctx.fillStyle = '#1a1a1a'; // Dark background
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     if (thoughts.length === 0) {
       // Show empty state
-      ctx.fillStyle = 'hsl(var(--muted-foreground))';
+      ctx.fillStyle = '#888888';
       ctx.font = '16px system-ui';
       ctx.textAlign = 'center';
       ctx.fillText('Begin observation to see consciousness unfold...', canvas.width / 2, canvas.height / 2);
@@ -91,25 +94,27 @@ export const ConceptNetwork: React.FC<ConceptNetworkProps> = ({
         ctx.beginPath();
         ctx.moveTo(x1, y1);
         ctx.lineTo(x2, y2);
-        ctx.strokeStyle = `hsla(var(--primary), ${strength * 0.3})`;
+        ctx.strokeStyle = `rgba(139, 92, 246, ${strength * 0.3})`; // Purple with alpha
         ctx.lineWidth = strength * 3;
         ctx.stroke();
       });
     });
 
     // Draw thought nodes
-    thoughts.forEach((thought) => {
+    thoughts.forEach((thought, index) => {
       if (!thought.conceptual_coordinates) return;
 
       const x = (thought.conceptual_coordinates.x + 100) * (canvas.width / 200);
       const y = (thought.conceptual_coordinates.y + 100) * (canvas.height / 200);
       const radius = 8 + (thought.semantic_weight || 0) * 12;
 
+      console.log(`ConceptNetwork: Drawing thought ${index} at (${x}, ${y}) with radius ${radius}`);
+
       // Node glow effect
       if (selectedThought === thought.id || hoveredThought === thought.id) {
         const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius * 2);
-        gradient.addColorStop(0, 'hsla(var(--primary), 0.4)');
-        gradient.addColorStop(1, 'hsla(var(--primary), 0)');
+        gradient.addColorStop(0, 'rgba(139, 92, 246, 0.4)');
+        gradient.addColorStop(1, 'rgba(139, 92, 246, 0)');
         ctx.fillStyle = gradient;
         ctx.beginPath();
         ctx.arc(x, y, radius * 2, 0, 2 * Math.PI);
@@ -123,22 +128,22 @@ export const ConceptNetwork: React.FC<ConceptNetworkProps> = ({
       // Color based on breakthrough potential
       const breakthrough = thought.judge_scores?.breakthrough_potential || 0;
       if (breakthrough >= 8) {
-        ctx.fillStyle = 'hsl(var(--primary))';
+        ctx.fillStyle = '#8b5cf6'; // Primary purple
       } else if (breakthrough >= 6) {
-        ctx.fillStyle = 'hsl(var(--secondary))';
+        ctx.fillStyle = '#06b6d4'; // Secondary cyan
       } else {
-        ctx.fillStyle = 'hsl(var(--muted))';
+        ctx.fillStyle = '#6b7280'; // Muted gray
       }
       
       ctx.fill();
       
       // Node border
-      ctx.strokeStyle = selectedThought === thought.id ? 'hsl(var(--primary))' : 'hsl(var(--border))';
+      ctx.strokeStyle = selectedThought === thought.id ? '#8b5cf6' : '#374151';
       ctx.lineWidth = selectedThought === thought.id ? 3 : 1;
       ctx.stroke();
 
       // Step number
-      ctx.fillStyle = 'hsl(var(--background))';
+      ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 10px system-ui';
       ctx.textAlign = 'center';
       ctx.fillText(thought.step_number.toString(), x, y + 3);
@@ -146,10 +151,10 @@ export const ConceptNetwork: React.FC<ConceptNetworkProps> = ({
 
     // Processing indicator
     if (isProcessing) {
-      ctx.fillStyle = 'hsla(var(--muted-foreground), 0.8)';
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
-      ctx.fillStyle = 'hsl(var(--primary))';
+      ctx.fillStyle = '#8b5cf6';
       ctx.font = '18px system-ui';
       ctx.textAlign = 'center';
       ctx.fillText('Consciousness telescope focusing...', canvas.width / 2, canvas.height / 2);
