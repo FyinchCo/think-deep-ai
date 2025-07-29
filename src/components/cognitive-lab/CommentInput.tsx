@@ -18,18 +18,19 @@ export const CommentInput: React.FC<CommentInputProps> = ({
   placeholder = "Add your guidance or insights for this step...",
   disabled = false
 }) => {
-  const [comment, setComment] = useState(existingComment);
+  const [comment, setComment] = useState(existingComment || '');
   const [isEditing, setIsEditing] = useState(!existingComment);
 
   const handleSave = () => {
-    if (comment.trim()) {
-      onSave(comment.trim());
+    const trimmedComment = comment?.trim() || '';
+    if (trimmedComment) {
+      onSave(trimmedComment);
       setIsEditing(false);
     }
   };
 
   const handleCancel = () => {
-    setComment(existingComment);
+    setComment(existingComment || '');
     setIsEditing(false);
     onCancel?.();
   };
@@ -93,7 +94,7 @@ export const CommentInput: React.FC<CommentInputProps> = ({
           variant="default"
           size="sm"
           onClick={handleSave}
-          disabled={disabled || !comment.trim()}
+          disabled={disabled || !(comment?.trim())}
         >
           <Save className="h-3 w-3 mr-1" />
           Save
