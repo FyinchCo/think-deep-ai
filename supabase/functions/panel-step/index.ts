@@ -239,7 +239,7 @@ As ${agent.name}, provide your perspective on how to advance this exploration. B
 
 Your response should be 2-3 paragraphs maximum.`;
 
-  return await callAI(prompt, 'gpt-4.1-2025-04-14');
+  return await callAI(prompt, 'gpt-4o');
 }
 
 async function generateAgentCritique(agent: Agent, proposals: string[], agentIndex: number, question: string, domain: string) {
@@ -255,7 +255,7 @@ As ${agent.name}, provide constructive critique and identify key tensions or syn
 
 Keep your critique to 1-2 paragraphs.`;
 
-  return await callAI(prompt, 'gpt-4.1-2025-04-14');
+  return await callAI(prompt, 'gpt-4o');
 }
 
 async function generatePanelSynthesis(question: string, domain: string, proposals: string[], critiques: string[], previousContext: string, stepNumber: number) {
@@ -297,7 +297,7 @@ Depth: [1-10]
 Coherence: [1-10]
 Relevance: [1-10]`;
 
-  const response = await callAI(prompt, 'gpt-4.1-2025-04-14');
+  const response = await callAI(prompt, 'gpt-4o');
   
   // Parse the structured response
   const sections = response.split(/(?:SYNTHESIS:|AGENT CONTRIBUTIONS:|DEBATE SUMMARY:|SCORES:)/);
@@ -348,7 +348,7 @@ function parseScores(text: string): Record<string, number> {
   return scores;
 }
 
-async function callAI(prompt: string, model: string = 'gpt-4.1-2025-04-14'): Promise<string> {
+async function callAI(prompt: string, model: string = 'gpt-4o'): Promise<string> {
   const apiKey = Deno.env.get('OPENAI_API_KEY');
   if (!apiKey) {
     throw new Error('OpenAI API key not configured');
