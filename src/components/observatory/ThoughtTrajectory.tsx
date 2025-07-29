@@ -42,11 +42,11 @@ export const ThoughtTrajectory: React.FC<ThoughtTrajectoryProps> = ({
     canvas.height = rect.height;
 
     // Clear canvas
-    ctx.fillStyle = 'hsl(var(--background))';
+    ctx.fillStyle = '#1a1a1a';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     if (thoughts.length === 0) {
-      ctx.fillStyle = 'hsl(var(--muted-foreground))';
+      ctx.fillStyle = '#888888';
       ctx.font = '16px system-ui';
       ctx.textAlign = 'center';
       ctx.fillText('Consciousness trajectory will appear here...', canvas.width / 2, canvas.height / 2);
@@ -70,14 +70,14 @@ export const ThoughtTrajectory: React.FC<ThoughtTrajectoryProps> = ({
         }
       });
       
-      ctx.strokeStyle = 'hsl(var(--primary))';
+      ctx.strokeStyle = '#8b5cf6';
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      // Draw trajectory gradient
+      // Draw trajectory gradient background (simplified)
       const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
-      gradient.addColorStop(0, 'hsla(var(--primary), 0.1)');
-      gradient.addColorStop(1, 'hsla(var(--secondary), 0.1)');
+      gradient.addColorStop(0, 'rgba(139, 92, 246, 0.1)');
+      gradient.addColorStop(1, 'rgba(6, 182, 212, 0.1)');
       
       ctx.beginPath();
       thoughts.forEach((thought, index) => {
@@ -107,14 +107,11 @@ export const ThoughtTrajectory: React.FC<ThoughtTrajectoryProps> = ({
       const y = canvas.height - (thought.conceptual_coordinates.y + 100) * (canvas.height / 200) - 50;
       const radius = 6 + (thought.semantic_weight || 0) * 8;
 
-      // Glow effect for selected thought
+      // Glow effect for selected thought (simplified)
       if (selectedThought === thought.id) {
-        const glowGradient = ctx.createRadialGradient(x, y, 0, x, y, radius * 3);
-        glowGradient.addColorStop(0, 'hsla(var(--primary), 0.6)');
-        glowGradient.addColorStop(1, 'hsla(var(--primary), 0)');
-        ctx.fillStyle = glowGradient;
         ctx.beginPath();
-        ctx.arc(x, y, radius * 3, 0, 2 * Math.PI);
+        ctx.arc(x, y, radius + 4, 0, 2 * Math.PI);
+        ctx.fillStyle = 'rgba(139, 92, 246, 0.3)';
         ctx.fill();
       }
 
@@ -124,20 +121,20 @@ export const ThoughtTrajectory: React.FC<ThoughtTrajectoryProps> = ({
       
       const breakthrough = thought.judge_scores?.breakthrough_potential || 0;
       if (breakthrough >= 8) {
-        ctx.fillStyle = 'hsl(var(--primary))';
+        ctx.fillStyle = '#8b5cf6';
       } else if (breakthrough >= 6) {
-        ctx.fillStyle = 'hsl(var(--secondary))';
+        ctx.fillStyle = '#06b6d4';
       } else {
-        ctx.fillStyle = 'hsl(var(--muted))';
+        ctx.fillStyle = '#6b7280';
       }
       ctx.fill();
       
-      ctx.strokeStyle = selectedThought === thought.id ? 'hsl(var(--primary))' : 'hsl(var(--border))';
+      ctx.strokeStyle = selectedThought === thought.id ? '#8b5cf6' : '#374151';
       ctx.lineWidth = selectedThought === thought.id ? 3 : 1;
       ctx.stroke();
 
       // Step label
-      ctx.fillStyle = 'hsl(var(--foreground))';
+      ctx.fillStyle = '#ffffff';
       ctx.font = '10px system-ui';
       ctx.textAlign = 'center';
       ctx.fillText(thought.step_number.toString(), x, y - radius - 8);
@@ -146,7 +143,7 @@ export const ThoughtTrajectory: React.FC<ThoughtTrajectoryProps> = ({
     // Draw depth line (conceptual complexity over time)
     if (thoughts.length > 1) {
       ctx.beginPath();
-      ctx.strokeStyle = 'hsla(var(--secondary), 0.6)';
+      ctx.strokeStyle = 'rgba(6, 182, 212, 0.6)';
       ctx.lineWidth = 1;
       ctx.setLineDash([3, 3]);
       
@@ -166,7 +163,7 @@ export const ThoughtTrajectory: React.FC<ThoughtTrajectoryProps> = ({
     }
 
     // Axes labels
-    ctx.fillStyle = 'hsl(var(--muted-foreground))';
+    ctx.fillStyle = '#888888';
     ctx.font = '12px system-ui';
     ctx.textAlign = 'left';
     ctx.fillText('Time →', 20, canvas.height - 10);
