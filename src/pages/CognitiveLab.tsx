@@ -850,67 +850,45 @@ Total steps analyzed: ${answers.length}`;
                     </Badge>
                   </div>
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <Button
-                      onClick={generateBrillianceCompressionReport}
-                      size="sm"
-                      variant="default"
-                      disabled={isGeneratingBrilliance}
-                      className="bg-gradient-primary hover:bg-gradient-primary/90 justify-start"
-                    >
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      {isGeneratingBrilliance ? 'Analyzing...' : 'Brilliance Report'}
-                    </Button>
-                    
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowScores(!showScores)}
-                      className="justify-start"
-                    >
-                      {showScores ? 'Hide Scores' : 'Show Scores'}
-                    </Button>
-                    
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={exportProgressSummary}
-                      className="justify-start"
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Export Progress Summary
-                    </Button>
-                    
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowCoherenceMonitor(!showCoherenceMonitor)}
-                      title={showCoherenceMonitor ? 'Hide Coherence Monitor' : 'Show Coherence Monitor'}
-                      className="justify-start"
-                    >
-                      {showCoherenceMonitor ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
-                      Coherence
-                    </Button>
-                    
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={exportToTxt}
-                      className="justify-start"
-                    >
-                      <FileText className="h-4 w-4 mr-2" />
-                      Export Full Report
-                    </Button>
-                    
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={resetExploration}
-                      className="justify-start"
-                    >
-                      <RotateCcw className="h-4 w-4 mr-2" />
-                      New Exploration
-                    </Button>
+                  
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowScores(!showScores)}
+                        className="justify-start"
+                      >
+                        {showScores ? 'Hide Scores' : 'Show Scores'}
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowCoherenceMonitor(!showCoherenceMonitor)}
+                        title={showCoherenceMonitor ? 'Hide Coherence Monitor' : 'Show Coherence Monitor'}
+                        className="justify-start"
+                      >
+                        {showCoherenceMonitor ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
+                        Coherence
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={resetExploration}
+                        className="justify-start"
+                      >
+                        <RotateCcw className="h-4 w-4 mr-2" />
+                        New Exploration
+                      </Button>
+                    </div>
+
+                    <ExportTools 
+                      rabbitHole={currentRabbitHole}
+                      answers={answers}
+                      globalBrillianceMetrics={globalBrillianceMetrics}
+                    />
                   </div>
                 </div>
               </CardHeader>
