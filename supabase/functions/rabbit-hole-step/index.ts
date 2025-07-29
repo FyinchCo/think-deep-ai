@@ -182,10 +182,16 @@ async function handleNextStep(rabbit_hole_id: string) {
     .eq('is_valid', true)
     .order('step_number', { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();
 
-  if (!rabbitHole || !lastAnswer) {
-    throw new Error('Cannot find rabbit hole or previous answer');
+  if (!rabbitHole) {
+    throw new Error('Cannot find rabbit hole');
+  }
+
+  // If no previous answers, this should be the first step - redirect to start action
+  if (!lastAnswer) {
+    console.log('No previous answers found, starting rabbit hole');
+    return await handleStartRabbitHole(rabbit_hole_id);
   }
 
   console.log(`Generating step ${lastAnswer.step_number + 1} for rabbit hole`);
