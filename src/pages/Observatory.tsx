@@ -242,6 +242,7 @@ const Observatory = () => {
           .select('*')
           .eq('status', 'active')
           .eq('domain', 'consciousness')
+          .order('total_steps', { ascending: false }) // Load the one with most progress
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
