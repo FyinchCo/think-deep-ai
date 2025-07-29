@@ -104,20 +104,25 @@ export const ConceptNetwork: React.FC<ConceptNetworkProps> = ({
     thoughts.forEach((thought, index) => {
       if (!thought.conceptual_coordinates) return;
 
-      const x = (thought.conceptual_coordinates.x + 100) * (canvas.width / 200);
-      const y = (thought.conceptual_coordinates.y + 100) * (canvas.height / 200);
+      const rawX = (thought.conceptual_coordinates.x + 100) * (canvas.width / 200);
+      const rawY = (thought.conceptual_coordinates.y + 100) * (canvas.height / 200);
+      
+      // Validate coordinates
+      const x = isFinite(rawX) ? rawX : canvas.width / 2;
+      const y = isFinite(rawY) ? rawY : canvas.height / 2;
       const radius = Math.max(8 + (thought.semantic_weight || 0) * 12, 8);
 
-      console.log(`ConceptNetwork: Drawing thought ${index} at (${x}, ${y}) with radius ${radius}`);
+      console.log(`ConceptNetwork: Drawing thought ${index} at (${x}, ${y}) with radius ${radius}`, {
+        originalCoords: thought.conceptual_coordinates,
+        semanticWeight: thought.semantic_weight,
+        canvasSize: { width: canvas.width, height: canvas.height }
+      });
 
-      // Node glow effect
+      // Simple selection highlight (no gradient for now)
       if (selectedThought === thought.id || hoveredThought === thought.id) {
-        const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius * 2);
-        gradient.addColorStop(0, 'rgba(139, 92, 246, 0.4)');
-        gradient.addColorStop(1, 'rgba(139, 92, 246, 0)');
-        ctx.fillStyle = gradient;
         ctx.beginPath();
-        ctx.arc(x, y, radius * 2, 0, 2 * Math.PI);
+        ctx.arc(x, y, radius + 4, 0, 2 * Math.PI);
+        ctx.fillStyle = 'rgba(139, 92, 246, 0.2)';
         ctx.fill();
       }
 
