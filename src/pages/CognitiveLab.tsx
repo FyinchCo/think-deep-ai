@@ -455,6 +455,44 @@ const CognitiveLab = () => {
     });
   };
 
+  const saveComment = async (stepId: string, comment: string) => {
+    try {
+      const { error } = await supabase
+        .from('answers')
+        .update({ 
+          user_comment: comment,
+          is_user_guided: true,
+          comment_added_at: new Date().toISOString()
+        })
+        .eq('id', stepId);
+
+      if (error) throw error;
+
+      // Update local state
+      setAnswers(prev => prev.map(answer => 
+        answer.id === stepId 
+          ? { 
+              ...answer, 
+              user_comment: comment, 
+              is_user_guided: true 
+            }
+          : answer
+      ));
+
+      toast({
+        title: "Comment saved",
+        description: "Your guidance has been added to this step.",
+      });
+    } catch (error: any) {
+      console.error('Error saving comment:', error);
+      toast({
+        title: "Error saving comment",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   // Function moved to top of component
 
   const getScoreColor = (score: number) => {
@@ -943,6 +981,7 @@ Total steps analyzed: ${answers.length}`;
                       showScores={showScores}
                       isBookmarked={bookmarkedSteps.has(answer.id)}
                       onToggleBookmark={toggleBookmark}
+                      onSaveComment={saveComment}
                       defaultExpanded={index >= Math.max(0, filteredAnswers.length - 2)}
                     />
                   ))}

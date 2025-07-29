@@ -236,6 +236,16 @@ async function handleNextStep(rabbit_hole_id: string) {
   while (retryCount < maxRetries) {
     console.log(`Attempting step ${lastAnswer.step_number + 1}, retry ${retryCount}`);
     try {
+      // Get recent user comments for context
+      const { data: recentAnswers } = await supabase
+        .from('answers')
+        .select('step_number, user_comment, is_user_guided')
+        .eq('rabbit_hole_id', rabbit_hole_id)
+        .eq('is_valid', true)
+        .not('user_comment', 'is', null)
+        .order('step_number', { ascending: false })
+        .limit(3);
+
       // Generate next answer with pressure applied
       const generatedAnswer = await generateNextAnswer({
         initial_question: rabbitHole.initial_question,
@@ -244,7 +254,8 @@ async function handleNextStep(rabbit_hole_id: string) {
         domain: rabbitHole.domain,
         retry_feedback: retryCount > 0 ? 'Previous attempt was rejected. Focus on adding genuine new insights.' : null,
         pressure_config: pressureConfig,
-        coherence_metrics: coherenceMetrics
+        coherence_metrics: coherenceMetrics,
+        user_comments: recentAnswers || []
       });
 
       // Check global novelty with vector similarity
@@ -401,7 +412,7 @@ Your response should be thoughtful, substantive (2-4 paragraphs), and represent 
   };
 }
 
-async function generateNextAnswer({ initial_question, previous_answer, step_number, domain, retry_feedback, pressure_config, coherence_metrics }: {
+async function generateNextAnswer({ initial_question, previous_answer, step_number, domain, retry_feedback, pressure_config, coherence_metrics, user_comments }: {
   initial_question: string;
   previous_answer: string;
   step_number: number;
@@ -409,6 +420,7 @@ async function generateNextAnswer({ initial_question, previous_answer, step_numb
   retry_feedback?: string | null;
   pressure_config: PressureConfig;
   coherence_metrics?: CoherenceMetrics;
+  user_comments?: any[];
 }) {
   const pressureInstructions = pressure_config.cognitive_intensity > 0.7 
     ? `\n\nCOGNITIVE PRESSURE APPLIED (Level ${pressure_config.cognitive_intensity.toFixed(1)}): You are operating under heightened intellectual demands. This step will be judged against breakthrough-level standards. Seek paradigm-shifting insights that transcend conventional reasoning.`
@@ -424,6 +436,21 @@ async function generateNextAnswer({ initial_question, previous_answer, step_numb
     coherenceGuidance = `\n\nCOHERENCE ALERT: ${coherence_metrics.recommendation}. Consider grounding abstract concepts in concrete examples or practical applications.`;
   } else if (coherence_metrics?.saturationRisk === 'medium') {
     coherenceGuidance = `\n\nCOHERENCE NOTE: Moderate conceptual density detected. Ensure new insights add practical value rather than just conceptual complexity.`;
+  }
+
+  // Add user guidance context if available
+  let userGuidanceContext = '';
+  if (user_comments && user_comments.length > 0) {
+    const relevantComments = user_comments
+      .sort((a, b) => b.step_number - a.step_number)
+      .slice(0, 2); // Most recent 2 comments
+    
+    userGuidanceContext = `\n\nUSER GUIDANCE RECEIVED:
+${relevantComments.map(comment => 
+  `Step ${comment.step_number}: "${comment.user_comment}"`
+).join('\n')}
+
+IMPORTANT: The user has provided specific guidance above. Consider their insights and directions carefully as you build upon the previous step. Their guidance represents valuable human perspective that should influence your exploration direction.`;
   }
 
   const prompt = `You are an expert in ${domain} engaged in deep intellectual exploration. This is step ${step_number} of an ongoing investigation.
@@ -452,7 +479,7 @@ PROHIBITED ACTIONS:
 - Simply expanding without adding new depth
 - Accepting conventional wisdom without challenge
 
-Your response should reveal a NEW layer of understanding that builds on what came before while advancing the exploration meaningfully.${pressureInstructions}${coherenceGuidance}`;
+Your response should reveal a NEW layer of understanding that builds on what came before while advancing the exploration meaningfully.${pressureInstructions}${coherenceGuidance}${userGuidanceContext}`;
 
   const response = await callAI(prompt, 0.7);
 

@@ -46,10 +46,12 @@ export type Database = {
       answers: {
         Row: {
           answer_text: string
+          comment_added_at: string | null
           generated_at: string
           generator_model: string | null
           generator_prompt_details: Json | null
           id: string
+          is_user_guided: boolean
           is_valid: boolean
           judge_feedback: string | null
           judge_model: string | null
@@ -59,13 +61,16 @@ export type Database = {
           rabbit_hole_id: string
           retry_count: number
           step_number: number
+          user_comment: string | null
         }
         Insert: {
           answer_text: string
+          comment_added_at?: string | null
           generated_at?: string
           generator_model?: string | null
           generator_prompt_details?: Json | null
           id?: string
+          is_user_guided?: boolean
           is_valid?: boolean
           judge_feedback?: string | null
           judge_model?: string | null
@@ -75,13 +80,16 @@ export type Database = {
           rabbit_hole_id: string
           retry_count?: number
           step_number: number
+          user_comment?: string | null
         }
         Update: {
           answer_text?: string
+          comment_added_at?: string | null
           generated_at?: string
           generator_model?: string | null
           generator_prompt_details?: Json | null
           id?: string
+          is_user_guided?: boolean
           is_valid?: boolean
           judge_feedback?: string | null
           judge_model?: string | null
@@ -91,6 +99,7 @@ export type Database = {
           rabbit_hole_id?: string
           retry_count?: number
           step_number?: number
+          user_comment?: string | null
         }
         Relationships: [
           {

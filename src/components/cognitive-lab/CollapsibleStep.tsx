@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ChevronDown, ChevronRight, Bookmark, BookmarkCheck } from 'lucide-react';
+import { ChevronDown, ChevronRight, Bookmark, BookmarkCheck, MessageSquareText } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { CommentInput } from './CommentInput';
 
 interface Answer {
   id: string;
@@ -13,6 +14,8 @@ interface Answer {
   judge_scores?: any;
   generated_at: string;
   retry_count: number;
+  user_comment?: string;
+  is_user_guided?: boolean;
 }
 
 interface CollapsibleStepProps {
@@ -20,6 +23,7 @@ interface CollapsibleStepProps {
   showScores: boolean;
   isBookmarked: boolean;
   onToggleBookmark: (stepId: string) => void;
+  onSaveComment?: (stepId: string, comment: string) => void;
   defaultExpanded?: boolean;
 }
 
@@ -28,6 +32,7 @@ export const CollapsibleStep: React.FC<CollapsibleStepProps> = ({
   showScores,
   isBookmarked,
   onToggleBookmark,
+  onSaveComment,
   defaultExpanded = false
 }) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
@@ -57,7 +62,10 @@ export const CollapsibleStep: React.FC<CollapsibleStepProps> = ({
                 <ChevronRight className="h-4 w-4" />
               )}
             </Button>
-            <Badge className="bg-neural text-white">Step {answer.step_number}</Badge>
+            <Badge className={cn("text-white", answer.is_user_guided ? "bg-primary" : "bg-neural")}>
+              Step {answer.step_number}
+              {answer.is_user_guided && <MessageSquareText className="h-3 w-3 ml-1" />}
+            </Badge>
             <Button
               variant="ghost"
               size="sm"
@@ -105,8 +113,17 @@ export const CollapsibleStep: React.FC<CollapsibleStepProps> = ({
         )}
       </CardHeader>
       {isExpanded && (
-        <CardContent>
+        <CardContent className="space-y-4">
           <p className="text-base leading-relaxed whitespace-pre-wrap">{answer.answer_text}</p>
+          
+          {onSaveComment && (
+            <CommentInput
+              existingComment={answer.user_comment}
+              onSave={(comment) => onSaveComment(answer.id, comment)}
+              placeholder={`Guide the exploration from step ${answer.step_number}...`}
+            />
+          )}
+          
           {showScores && answer.judge_scores && (
             <div className="mt-4 p-3 bg-muted/50 rounded-lg">
               <p className="text-xs text-muted-foreground">{answer.judge_scores.explanation}</p>
