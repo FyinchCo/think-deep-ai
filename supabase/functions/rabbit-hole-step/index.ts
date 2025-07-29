@@ -168,14 +168,28 @@ async function handleStartRabbitHole(rabbit_hole_id: string) {
 }
 
 async function handleNextStep(rabbit_hole_id: string) {
-  // Get rabbit hole and last answer
-  const { data: rabbitHole } = await supabase
+  console.log(`HandleNextStep called for rabbit hole: ${rabbit_hole_id}`);
+  
+  // Get rabbit hole and last answer with proper error handling
+  const { data: rabbitHole, error: rabbitHoleError } = await supabase
     .from('rabbit_holes')
     .select('*')
     .eq('id', rabbit_hole_id)
-    .single();
+    .maybeSingle();
 
-  const { data: lastAnswer } = await supabase
+  if (rabbitHoleError) {
+    console.error('Error fetching rabbit hole:', rabbitHoleError);
+    throw new Error(`Failed to fetch rabbit hole: ${rabbitHoleError.message}`);
+  }
+
+  if (!rabbitHole) {
+    console.error(`Rabbit hole not found: ${rabbit_hole_id}`);
+    throw new Error('Cannot find rabbit hole');
+  }
+
+  console.log(`Found rabbit hole: ${rabbitHole.initial_question}`);
+
+  const { data: lastAnswer, error: answerError } = await supabase
     .from('answers')
     .select('*')
     .eq('rabbit_hole_id', rabbit_hole_id)
@@ -184,8 +198,9 @@ async function handleNextStep(rabbit_hole_id: string) {
     .limit(1)
     .maybeSingle();
 
-  if (!rabbitHole) {
-    throw new Error('Cannot find rabbit hole');
+  if (answerError) {
+    console.error('Error fetching last answer:', answerError);
+    throw new Error(`Failed to fetch previous answers: ${answerError.message}`);
   }
 
   // If no previous answers, this should be the first step - redirect to start action
@@ -193,6 +208,8 @@ async function handleNextStep(rabbit_hole_id: string) {
     console.log('No previous answers found, starting rabbit hole');
     return await handleStartRabbitHole(rabbit_hole_id);
   }
+
+  console.log(`Found last answer at step: ${lastAnswer.step_number}`);
 
   console.log(`Generating step ${lastAnswer.step_number + 1} for rabbit hole`);
 
