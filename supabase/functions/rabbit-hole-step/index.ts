@@ -684,7 +684,7 @@ async function callGemini(prompt: string, temperature: number = 0.7): Promise<st
     throw new Error('GEMINI_API_KEY not found');
   }
 
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${geminiApiKey}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -723,7 +723,7 @@ async function callGrok(prompt: string, temperature: number = 0.7): Promise<stri
     },
     body: JSON.stringify({
       messages: [{ role: 'user', content: prompt }],
-      model: 'grok-beta',
+      model: 'grok-4',
       stream: false,
       temperature,
       max_tokens: 1000
