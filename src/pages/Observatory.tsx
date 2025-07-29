@@ -74,7 +74,7 @@ const Observatory = () => {
         .insert({
           initial_question: question,
           domain: 'consciousness',
-          status: 'observing'
+          status: 'active'
         })
         .select()
         .single();
