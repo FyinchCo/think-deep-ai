@@ -120,6 +120,16 @@ Deno.serve(async (req) => {
       `Step ${a.step_number}: ${a.answer_text}`
     ).join('\n\n') || '';
 
+    // Get recent user comments for context
+    const { data: recentAnswers } = await supabase
+      .from('answers')
+      .select('step_number, user_comment, is_user_guided')
+      .eq('rabbit_hole_id', rabbit_hole_id)
+      .eq('is_valid', true)
+      .not('user_comment', 'is', null)
+      .order('step_number', { ascending: false })
+      .limit(3);
+
     console.log(`Generating panel step ${nextStepNumber} with ${agents.length} agents`);
 
     // Generate panel debate
@@ -127,7 +137,8 @@ Deno.serve(async (req) => {
       rabbitHole.initial_question,
       rabbitHole.domain,
       previousContext,
-      nextStepNumber
+      nextStepNumber,
+      recentAnswers || []
     );
 
     // Store the panel answer
@@ -193,12 +204,12 @@ Deno.serve(async (req) => {
   }
 });
 
-async function generatePanelDebate(question: string, domain: string, previousContext: string, stepNumber: number) {
+async function generatePanelDebate(question: string, domain: string, previousContext: string, stepNumber: number, userComments: any[] = []) {
   console.log('Starting multi-agent panel debate');
 
   // Round 1: Individual agent proposals
   const agentProposals = await Promise.all(
-    agents.map(agent => generateAgentProposal(agent, question, domain, previousContext, stepNumber))
+    agents.map(agent => generateAgentProposal(agent, question, domain, previousContext, stepNumber, userComments))
   );
 
   // Round 2: Cross-agent critiques and responses
@@ -221,7 +232,7 @@ async function generatePanelDebate(question: string, domain: string, previousCon
   return finalSynthesis;
 }
 
-async function generateAgentProposal(agent: Agent, question: string, domain: string, previousContext: string, stepNumber: number) {
+async function generateAgentProposal(agent: Agent, question: string, domain: string, previousContext: string, stepNumber: number, userComments: any[] = []) {
   const prompt = `You are ${agent.name}, the ${agent.role} in a philosophical inquiry council.
 
 PERSONALITY: ${agent.personality}
@@ -234,6 +245,14 @@ Original Question: "${question}"
 Domain: ${domain}
 Previous Steps:
 ${previousContext}
+${userComments.length > 0 ? `
+
+USER GUIDANCE RECEIVED:
+${userComments.map(comment => 
+  `Step ${comment.step_number}: "${comment.user_comment}"`
+).join('\n')}
+
+IMPORTANT: The user has provided specific guidance above. Consider their insights and directions carefully as you develop your proposal from your role perspective. Their guidance represents valuable human perspective that should influence your exploration approach.` : ''}
 
 Current Step: ${stepNumber}
 

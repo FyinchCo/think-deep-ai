@@ -121,13 +121,24 @@ serve(async (req) => {
 
       console.log(`Generating grounding panel step ${nextStepNumber} with ${agents.length} agents (attempt ${retryCount + 1})`);
 
-      // Generate grounding panel synthesis
-      const result = await generateGroundingPanel(
-        rabbitHole.initial_question,
-        context,
-        nextStepNumber,
-        rabbitHole.domain
-      );
+    // Get recent user comments for context
+    const { data: recentAnswers } = await supabase
+      .from('answers')
+      .select('step_number, user_comment, is_user_guided')
+      .eq('rabbit_hole_id', rabbit_hole_id)
+      .eq('is_valid', true)
+      .not('user_comment', 'is', null)
+      .order('step_number', { ascending: false })
+      .limit(3);
+
+    // Generate grounding panel synthesis
+    const result = await generateGroundingPanel(
+      rabbitHole.initial_question,
+      context,
+      nextStepNumber,
+      rabbitHole.domain,
+      recentAnswers || []
+    );
 
       console.log(`Starting multi-agent grounding panel synthesis`);
 
@@ -211,7 +222,8 @@ async function generateGroundingPanel(
   initialQuestion: string,
   context: string,
   stepNumber: number,
-  domain: string
+  domain: string,
+  userComments: any[] = []
 ): Promise<{
   synthesizedAnswer: string;
   proposals: any[];
@@ -226,7 +238,7 @@ async function generateGroundingPanel(
   const proposals = [];
   
   for (const agent of agents) {
-    const proposal = await generateAgentGroundingProposal(agent, initialQuestion, context, stepNumber, domain);
+    const proposal = await generateAgentGroundingProposal(agent, initialQuestion, context, stepNumber, domain, userComments);
     proposals.push({
       agent: agent.name,
       content: proposal
@@ -258,7 +270,8 @@ async function generateAgentGroundingProposal(
   initialQuestion: string,
   context: string,
   stepNumber: number,
-  domain: string
+  domain: string,
+  userComments: any[] = []
 ): Promise<string> {
   
   const prompt = `You are ${agent.name}, ${agent.role}.
@@ -274,6 +287,13 @@ Current Step: ${stepNumber}
 
 Previous Context:
 ${context}
+${userComments.length > 0 ? `
+USER GUIDANCE RECEIVED:
+${userComments.map(comment => 
+  `Step ${comment.step_number}: "${comment.user_comment}"`
+).join('\n')}
+
+IMPORTANT: The user has provided specific guidance above. Consider their insights and directions carefully as you develop your grounding perspective. Their guidance represents valuable human perspective that should influence how you make concepts practical and concrete.` : ''}
 
 From your specific grounding perspective as ${agent.name}, provide a practical, concrete response that:
 
