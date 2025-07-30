@@ -79,7 +79,7 @@ serve(async (req) => {
       throw new Error(`Failed to fetch rabbit hole: ${rabbitHoleError.message}`);
     }
 
-    // Get previous valid answers to build context
+    // Get previous valid answers to build context and determine next step number
     const { data: previousAnswers, error: answersError } = await supabase
       .from('answers')
       .select('step_number, answer_text, generated_at')
@@ -91,9 +91,19 @@ serve(async (req) => {
       throw new Error(`Failed to fetch previous answers: ${answersError.message}`);
     }
 
-    const lastStepNumber = previousAnswers?.length > 0 
-      ? Math.max(...previousAnswers.map(a => a.step_number))
-      : 0;
+    // Get the absolute maximum step number to avoid conflicts
+    const { data: maxStepData, error: maxStepError } = await supabase
+      .from('answers')
+      .select('step_number')
+      .eq('rabbit_hole_id', rabbit_hole_id)
+      .order('step_number', { ascending: false })
+      .limit(1);
+
+    if (maxStepError) {
+      throw new Error(`Failed to fetch max step number: ${maxStepError.message}`);
+    }
+
+    const lastStepNumber = maxStepData?.length > 0 ? maxStepData[0].step_number : 0;
     const nextStepNumber = lastStepNumber + 1;
 
     // Build context from previous answers
