@@ -22,6 +22,49 @@ interface CoherenceMetrics {
   recommendation: string | null;
 }
 
+// Helper functions
+const calculateSemanticSimilarity = (steps: Answer[]): number => {
+  if (steps.length < 2) return 0;
+  
+  // Simple semantic similarity based on word overlap
+  const texts = steps.map(s => s.answer_text.toLowerCase());
+  const allWords = texts.join(' ').split(/\s+/);
+  const uniqueWords = new Set(allWords);
+  
+  const similarity = 1 - (uniqueWords.size / allWords.length);
+  return Math.min(similarity * 100, 100);
+};
+
+const calculateQualityTrend = (steps: Answer[]): 'improving' | 'stable' | 'declining' => {
+  if (steps.length < 3) return 'stable';
+  
+  const recentScores = steps.slice(-3).map(s => {
+    const scores = s.judge_scores;
+    if (scores) {
+      return (scores.depth + scores.novelty + scores.coherence) / 3;
+    }
+    return 7; // Default score
+  });
+  
+  const trend = recentScores[2] - recentScores[0];
+  if (trend > 0.5) return 'improving';
+  if (trend < -0.5) return 'declining';
+  return 'stable';
+};
+
+const assessSaturationRisk = (metaphor: number, complexity: number, similarity: number): 'low' | 'medium' | 'high' => {
+  if (similarity > 80 || (metaphor < 2 && complexity < 2)) return 'high';
+  if (similarity > 60 || (metaphor < 3 && complexity < 3)) return 'medium';
+  return 'low';
+};
+
+const generateRecommendation = (risk: string, trend: string, stepCount: number): string | null => {
+  if (risk === 'high') return "Consider introducing radically new concepts or paradigm shifts";
+  if (trend === 'declining') return "Try grounding mode to excavate deeper insights";
+  if (stepCount > 15 && risk === 'medium') return "Switch to cycling mode to break conceptual patterns";
+  return null;
+};
+
 export const useCoherenceTracking = (answers: Answer[]) => {
   // Memoize the key for stable comparison - only change when answers actually change
   const answersKey = useMemo(() => 
@@ -83,92 +126,6 @@ export const useCoherenceTracking = (answers: Answer[]) => {
       recommendation
     };
   }, [answersKey, answers]);
-
-  const calculateSemanticSimilarity = (steps: Answer[]): number => {
-    if (steps.length < 2) return 0;
-    
-    // Simple keyword overlap calculation
-    const getKeywords = (text: string) => {
-      return text.toLowerCase()
-        .replace(/[^\w\s]/g, ' ')
-        .split(/\s+/)
-        .filter(word => word.length > 4);
-    };
-
-    const lastStepKeywords = new Set(getKeywords(steps[steps.length - 1].answer_text));
-    const previousStepsKeywords = new Set();
-    
-    steps.slice(-4, -1).forEach(step => {
-      getKeywords(step.answer_text).forEach(keyword => previousStepsKeywords.add(keyword));
-    });
-
-    const intersection = new Set([...lastStepKeywords].filter(x => previousStepsKeywords.has(x)));
-    const union = new Set([...lastStepKeywords, ...previousStepsKeywords]);
-    
-    return union.size > 0 ? intersection.size / union.size : 0;
-  };
-
-  const calculateQualityTrend = (steps: Answer[]): 'improving' | 'stable' | 'declining' => {
-    if (steps.length < 3) return 'stable';
-
-    const getAverageScore = (step: Answer) => {
-      if (!step.judge_scores) return 7; // Default if no scores
-      const { novelty, depth, coherence, relevance } = step.judge_scores;
-      return (novelty + depth + coherence + relevance) / 4;
-    };
-
-    const recent = steps.slice(-3).map(getAverageScore);
-    const trend = recent[2] - recent[0];
-
-    if (trend > 0.3) return 'improving';
-    if (trend < -0.3) return 'declining';
-    return 'stable';
-  };
-
-  const assessSaturationRisk = (
-    metaphorDensity: number, 
-    conceptualComplexity: number, 
-    semanticSimilarity: number
-  ): 'low' | 'medium' | 'high' => {
-    let riskScore = 0;
-
-    if (metaphorDensity > 8) riskScore += 2;
-    else if (metaphorDensity > 5) riskScore += 1;
-
-    if (conceptualComplexity > 4) riskScore += 2;
-    else if (conceptualComplexity > 2) riskScore += 1;
-
-    if (semanticSimilarity > 0.7) riskScore += 2;
-    else if (semanticSimilarity > 0.5) riskScore += 1;
-
-    if (riskScore >= 4) return 'high';
-    if (riskScore >= 2) return 'medium';
-    return 'low';
-  };
-
-  const generateRecommendation = (
-    saturationRisk: 'low' | 'medium' | 'high',
-    qualityTrend: 'improving' | 'stable' | 'declining',
-    stepCount: number
-  ): string | null => {
-    if (saturationRisk === 'high' && stepCount > 30) {
-      return 'Consider concluding this exploration - conceptual saturation detected. The insights generated may benefit from consolidation.';
-    }
-
-    if (saturationRisk === 'high' && qualityTrend === 'declining') {
-      return 'High metaphor density with declining quality. Try grounding concepts in concrete examples or pivot to a new angle.';
-    }
-
-    if (saturationRisk === 'medium' && stepCount > 40) {
-      return 'Approaching conceptual limits. Consider crystallizing current insights before continuing.';
-    }
-
-    if (qualityTrend === 'declining' && stepCount > 20) {
-      return 'Quality trend declining. Consider refocusing on practical applications or concluding exploration.';
-    }
-
-    return null;
-  };
 
   return metrics;
 };
