@@ -95,8 +95,13 @@ async function handleStartRabbitHole(rabbit_hole_id: string) {
   // Calculate initial pressure config
   const pressureConfig = await calculateCognitivePressure(rabbit_hole_id, 1, rabbitHole.domain);
 
-  // Get exploration rules for this rabbit hole
-  const rulesText = await getFormattedRulesText(rabbit_hole_id, 'single');
+  // Get exploration rules for this rabbit hole (with error handling)
+  let rulesText = '';
+  try {
+    rulesText = await getFormattedRulesText(rabbit_hole_id, 'single');
+  } catch (error) {
+    console.error('Error getting rules text:', error);
+  }
 
   // Generate the first response with pressure applied
   const generatedAnswer = await generateFirstAnswer(rabbitHole.initial_question, rabbitHole.domain, pressureConfig, rulesText);
@@ -249,8 +254,13 @@ async function handleNextStep(rabbit_hole_id: string) {
         .order('step_number', { ascending: false })
         .limit(3);
 
-      // Get exploration rules for this step
-      const rulesText = await getFormattedRulesText(rabbit_hole_id, 'single');
+      // Get exploration rules for this step (with error handling)
+      let rulesText = '';
+      try {
+        rulesText = await getFormattedRulesText(rabbit_hole_id, 'single');
+      } catch (error) {
+        console.error('Error getting rules text:', error);
+      }
 
       // Generate next answer with pressure applied
       const generatedAnswer = await generateNextAnswer({
