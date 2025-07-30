@@ -23,6 +23,8 @@ import { useMetricTracking } from "@/hooks/useMetricTracking";
 import { useGlobalBrillianceDetection } from "@/hooks/useGlobalBrillianceDetection";
 import { BrillianceMonitor } from "@/components/cognitive-lab/BrillianceMonitor";
 import { GlobalBrillianceArchive } from "@/components/cognitive-lab/GlobalBrillianceArchive";
+import { RulesPanel } from "@/components/cognitive-lab/RulesPanel";
+import { useExplorationRules } from "@/hooks/useExplorationRules";
 
 interface Answer {
   id: string;
@@ -59,7 +61,14 @@ const CognitiveLab = () => {
   const [showCoherenceMonitor, setShowCoherenceMonitor] = useState(true);
   const [brillianceModeActive, setBrillianceModeActive] = useState(false);
   const [isGeneratingBrilliance, setIsGeneratingBrilliance] = useState(false);
+  const [rules, setRules] = useState([]);
   const { toast } = useToast();
+
+  // Rules integration
+  const explorationRules = useExplorationRules(
+    currentRabbitHole?.id || '', 
+    currentRabbitHole?.total_steps || 0
+  );
 
   const filterAnswers = () => {
     let filtered = answers;
@@ -895,10 +904,14 @@ Total steps analyzed: ${answers.length}`;
             </Card>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="exploration" className="flex items-center gap-2">
                   <List className="h-4 w-4" />
                   Exploration
+                </TabsTrigger>
+                <TabsTrigger value="rules" className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Rules
                 </TabsTrigger>
                 <TabsTrigger value="analytics" className="flex items-center gap-2">
                   <BarChart3 className="h-4 w-4" />
@@ -969,6 +982,17 @@ Total steps analyzed: ${answers.length}`;
                     </Card>
                   )}
                 </div>
+              </TabsContent>
+
+              <TabsContent value="rules" className="space-y-4">
+                <RulesPanel
+                  rabbitHoleId={currentRabbitHole.id}
+                  currentStep={currentRabbitHole.total_steps}
+                  onRulesChange={(updatedRules) => {
+                    setRules(updatedRules);
+                    explorationRules.refetchRules();
+                  }}
+                />
               </TabsContent>
 
               <TabsContent value="analytics" className="space-y-6">

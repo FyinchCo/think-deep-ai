@@ -160,6 +160,54 @@ export type Database = {
           },
         ]
       }
+      exploration_rules: {
+        Row: {
+          created_at: string
+          created_at_step: number
+          effectiveness_score: number | null
+          id: string
+          is_active: boolean
+          last_modified_step: number | null
+          priority: number
+          rabbit_hole_id: string
+          rule_text: string
+          rule_type: string
+          scope: string | null
+          trigger_condition: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_at_step: number
+          effectiveness_score?: number | null
+          id?: string
+          is_active?: boolean
+          last_modified_step?: number | null
+          priority?: number
+          rabbit_hole_id: string
+          rule_text: string
+          rule_type?: string
+          scope?: string | null
+          trigger_condition?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_at_step?: number
+          effectiveness_score?: number | null
+          id?: string
+          is_active?: boolean
+          last_modified_step?: number | null
+          priority?: number
+          rabbit_hole_id?: string
+          rule_text?: string
+          rule_type?: string
+          scope?: string | null
+          trigger_condition?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       rabbit_holes: {
         Row: {
           created_at: string

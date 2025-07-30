@@ -95,8 +95,11 @@ async function handleStartRabbitHole(rabbit_hole_id: string) {
   // Calculate initial pressure config
   const pressureConfig = await calculateCognitivePressure(rabbit_hole_id, 1, rabbitHole.domain);
 
+  // Get exploration rules for this rabbit hole
+  const rulesText = await getFormattedRulesText(rabbit_hole_id, 'single');
+
   // Generate the first response with pressure applied
-  const generatedAnswer = await generateFirstAnswer(rabbitHole.initial_question, rabbitHole.domain, pressureConfig);
+  const generatedAnswer = await generateFirstAnswer(rabbitHole.initial_question, rabbitHole.domain, pressureConfig, rulesText);
 
       // Check global novelty with vector similarity
       const globalNoveltyCheck = await checkGlobalNovelty(generatedAnswer.text, rabbitHole.domain);
@@ -246,6 +249,9 @@ async function handleNextStep(rabbit_hole_id: string) {
         .order('step_number', { ascending: false })
         .limit(3);
 
+      // Get exploration rules for this step
+      const rulesText = await getFormattedRulesText(rabbit_hole_id, 'single');
+
       // Generate next answer with pressure applied
       const generatedAnswer = await generateNextAnswer({
         initial_question: rabbitHole.initial_question,
@@ -255,7 +261,8 @@ async function handleNextStep(rabbit_hole_id: string) {
         retry_feedback: retryCount > 0 ? 'Previous attempt was rejected. Focus on adding genuine new insights.' : null,
         pressure_config: pressureConfig,
         coherence_metrics: coherenceMetrics,
-        user_comments: recentAnswers || []
+        user_comments: recentAnswers || [],
+        rulesText
       });
 
       // Check global novelty with vector similarity
@@ -382,7 +389,7 @@ async function handleNextStep(rabbit_hole_id: string) {
   });
 }
 
-async function generateFirstAnswer(initial_question: string, domain: string, pressure_config: PressureConfig) {
+async function generateFirstAnswer(initial_question: string, domain: string, pressure_config: PressureConfig, rulesText?: string) {
   const pressureInstructions = pressure_config.cognitive_intensity > 0.7 
     ? `\n\nCOGNITIVE PRESSURE APPLIED: You are expected to operate at the highest level of intellectual rigor. This exploration will be judged against the quality of existing insights in the knowledge base. Your response must be genuinely novel and profound.`
     : '';
@@ -402,7 +409,7 @@ Your task is to provide the first step in what will become a deep intellectual j
 
 Remember: This is the beginning of an incremental journey where each subsequent step must add genuine new value. Make this first step strong and specific enough to enable meaningful progression.
 
-Your response should be thoughtful, substantive (2-4 paragraphs), and represent a clear philosophical or intellectual position that can be deepened.${pressureInstructions}`;
+Your response should be thoughtful, substantive (2-4 paragraphs), and represent a clear philosophical or intellectual position that can be deepened.${pressureInstructions}${rulesText || ''}`;
 
   const response = await callAI(prompt, 0.7);
 
@@ -412,7 +419,7 @@ Your response should be thoughtful, substantive (2-4 paragraphs), and represent 
   };
 }
 
-async function generateNextAnswer({ initial_question, previous_answer, step_number, domain, retry_feedback, pressure_config, coherence_metrics, user_comments }: {
+async function generateNextAnswer({ initial_question, previous_answer, step_number, domain, retry_feedback, pressure_config, coherence_metrics, user_comments, rulesText }: {
   initial_question: string;
   previous_answer: string;
   step_number: number;
@@ -421,6 +428,7 @@ async function generateNextAnswer({ initial_question, previous_answer, step_numb
   pressure_config: PressureConfig;
   coherence_metrics?: CoherenceMetrics;
   user_comments?: any[];
+  rulesText?: string;
 }) {
   const pressureInstructions = pressure_config.cognitive_intensity > 0.7 
     ? `\n\nCOGNITIVE PRESSURE APPLIED (Level ${pressure_config.cognitive_intensity.toFixed(1)}): You are operating under heightened intellectual demands. This step will be judged against breakthrough-level standards. Seek paradigm-shifting insights that transcend conventional reasoning.`
@@ -479,7 +487,7 @@ PROHIBITED ACTIONS:
 - Simply expanding without adding new depth
 - Accepting conventional wisdom without challenge
 
-Your response should reveal a NEW layer of understanding that builds on what came before while advancing the exploration meaningfully.${pressureInstructions}${coherenceGuidance}${userGuidanceContext}`;
+Your response should reveal a NEW layer of understanding that builds on what came before while advancing the exploration meaningfully.${pressureInstructions}${coherenceGuidance}${userGuidanceContext}${rulesText || ''}`;
 
   const response = await callAI(prompt, 0.7);
 
@@ -1138,4 +1146,50 @@ function calculateTextSimilarity(answers: any[]): number {
   const union = new Set([...lastKeywords, ...previousKeywords]);
   
   return union.size > 0 ? intersection.size / union.size : 0;
+}
+
+// Rules System Functions
+async function getFormattedRulesText(rabbit_hole_id: string, mode: string): Promise<string> {
+  try {
+    // Get active rules for this rabbit hole and mode
+    const { data: rules, error } = await supabase
+      .from('exploration_rules')
+      .select('*')
+      .eq('rabbit_hole_id', rabbit_hole_id)
+      .eq('is_active', true)
+      .in('scope', ['all', mode])
+      .order('priority', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching rules:', error);
+      return '';
+    }
+
+    if (!rules || rules.length === 0) {
+      return '';
+    }
+
+    // Group rules by type
+    const rulesByType = rules.reduce((acc, rule) => {
+      if (!acc[rule.rule_type]) acc[rule.rule_type] = [];
+      acc[rule.rule_type].push(rule);
+      return acc;
+    }, {} as Record<string, any[]>);
+
+    let formattedText = '\n\n=== EXPLORATION RULES ===\n';
+    
+    Object.entries(rulesByType).forEach(([type, typeRules]) => {
+      formattedText += `\n${type.toUpperCase()} RULES:\n`;
+      typeRules.forEach((rule, index) => {
+        formattedText += `${index + 1}. ${rule.rule_text}\n`;
+      });
+    });
+
+    formattedText += '\nThese rules must be followed throughout your response.\n';
+    
+    return formattedText;
+  } catch (error) {
+    console.error('Error formatting rules text:', error);
+    return '';
+  }
 }
