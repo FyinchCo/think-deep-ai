@@ -269,9 +269,16 @@ const CognitiveLab = () => {
     setIsProcessing(true);
     
     try {
-      const { data, error } = await supabase.functions.invoke('panel-step', {
+      // Add timeout and retry logic for better reliability
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Function call timed out')), 120000) // 2 minute timeout
+      );
+      
+      const functionPromise = supabase.functions.invoke('panel-step', {
         body: { rabbit_hole_id: currentRabbitHole.id }
       });
+      
+      const { data, error } = await Promise.race([functionPromise, timeoutPromise]) as any;
 
       if (error) {
         console.error('Panel step generation error:', error);
@@ -319,9 +326,16 @@ const CognitiveLab = () => {
     setIsProcessing(true);
     
     try {
-      const { data, error } = await supabase.functions.invoke('grounding-panel-step', {
+      // Add timeout and retry logic for better reliability
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Function call timed out')), 120000) // 2 minute timeout
+      );
+      
+      const functionPromise = supabase.functions.invoke('grounding-panel-step', {
         body: { rabbit_hole_id: currentRabbitHole.id }
       });
+      
+      const { data, error } = await Promise.race([functionPromise, timeoutPromise]) as any;
 
       if (error) {
         console.error('Grounding panel generation error:', error);
