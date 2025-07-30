@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 
 interface Answer {
   id: string;
@@ -23,64 +23,66 @@ interface CoherenceMetrics {
 }
 
 export const useCoherenceTracking = (answers: Answer[]) => {
-  const [metrics, setMetrics] = useState<CoherenceMetrics>({
-    metaphorDensity: 0,
-    conceptualComplexity: 0,
-    semanticSimilarity: 0,
-    qualityTrend: 'stable',
-    saturationRisk: 'low',
-    recommendation: null
-  });
+  // Memoize the key for stable comparison - only change when answers actually change
+  const answersKey = useMemo(() => 
+    answers.map(a => `${a.id}-${a.step_number}`).join(','), 
+    [answers]
+  );
 
-  useEffect(() => {
-    if (answers.length === 0) return;
+  const metrics = useMemo(() => {
+    if (answers.length === 0) {
+      return {
+        metaphorDensity: 0,
+        conceptualComplexity: 0,
+        semanticSimilarity: 0,
+        qualityTrend: 'stable' as const,
+        saturationRisk: 'low' as const,
+        recommendation: null
+      };
+    }
 
-    const calculateMetrics = () => {
-      const recentSteps = answers.slice(-5); // Last 5 steps
-      const lastStep = answers[answers.length - 1];
+    const recentSteps = answers.slice(-5); // Last 5 steps
+    const lastStep = answers[answers.length - 1];
 
-      // Calculate metaphor density (abstract concepts per step)
-      const metaphorKeywords = [
-        'epistemic', 'ontological', 'meta-', 'shadow', 'mirror', 'gravity', 
-        'friction', 'resonance', 'decay', 'camouflage', 'wildfire', 'echo',
-        'paradigm', 'framework', 'spectrum', 'gradient', 'field'
-      ];
+    // Calculate metaphor density (abstract concepts per step)
+    const metaphorKeywords = [
+      'epistemic', 'ontological', 'meta-', 'shadow', 'mirror', 'gravity', 
+      'friction', 'resonance', 'decay', 'camouflage', 'wildfire', 'echo',
+      'paradigm', 'framework', 'spectrum', 'gradient', 'field'
+    ];
 
-      const metaphorCount = metaphorKeywords.reduce((count, keyword) => {
-        return count + (lastStep.answer_text.toLowerCase().split(keyword).length - 1);
-      }, 0);
+    const metaphorCount = metaphorKeywords.reduce((count, keyword) => {
+      return count + (lastStep.answer_text.toLowerCase().split(keyword).length - 1);
+    }, 0);
 
-      const metaphorDensity = metaphorCount / (lastStep.answer_text.length / 1000); // per 1000 chars
+    const metaphorDensity = metaphorCount / (lastStep.answer_text.length / 1000); // per 1000 chars
 
-      // Calculate conceptual complexity (new terms introduced)
-      const newConceptPattern = /"([^"]+)"|'([^']+)'|\*\*([^*]+)\*\*/g;
-      const conceptMatches = lastStep.answer_text.match(newConceptPattern) || [];
-      const conceptualComplexity = conceptMatches.length;
+    // Calculate conceptual complexity (new terms introduced)
+    const newConceptPattern = /"([^"]+)"|'([^']+)'|\*\*([^*]+)\*\*/g;
+    const conceptMatches = lastStep.answer_text.match(newConceptPattern) || [];
+    const conceptualComplexity = conceptMatches.length;
 
-      // Calculate semantic similarity with previous steps
-      const semanticSimilarity = calculateSemanticSimilarity(recentSteps);
+    // Calculate semantic similarity with previous steps
+    const semanticSimilarity = calculateSemanticSimilarity(recentSteps);
 
-      // Determine quality trend from scores
-      const qualityTrend = calculateQualityTrend(recentSteps);
+    // Determine quality trend from scores
+    const qualityTrend = calculateQualityTrend(recentSteps);
 
-      // Assess saturation risk
-      const saturationRisk = assessSaturationRisk(metaphorDensity, conceptualComplexity, semanticSimilarity);
+    // Assess saturation risk
+    const saturationRisk = assessSaturationRisk(metaphorDensity, conceptualComplexity, semanticSimilarity);
 
-      // Generate recommendation
-      const recommendation = generateRecommendation(saturationRisk, qualityTrend, answers.length);
+    // Generate recommendation
+    const recommendation = generateRecommendation(saturationRisk, qualityTrend, answers.length);
 
-      setMetrics({
-        metaphorDensity,
-        conceptualComplexity,
-        semanticSimilarity,
-        qualityTrend,
-        saturationRisk,
-        recommendation
-      });
+    return {
+      metaphorDensity,
+      conceptualComplexity,
+      semanticSimilarity,
+      qualityTrend,
+      saturationRisk,
+      recommendation
     };
-
-    calculateMetrics();
-  }, [answers]);
+  }, [answersKey, answers]);
 
   const calculateSemanticSimilarity = (steps: Answer[]): number => {
     if (steps.length < 2) return 0;
