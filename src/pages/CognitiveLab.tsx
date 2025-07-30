@@ -382,12 +382,19 @@ const CognitiveLab = () => {
 
     setIsProcessing(true);
     try {
-      const response = await supabase.functions.invoke('rabbit-hole-step', {
+      // Add timeout and retry logic for better reliability
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Function call timed out')), 120000) // 2 minute timeout
+      );
+      
+      const functionPromise = supabase.functions.invoke('rabbit-hole-step', {
         body: { 
           rabbit_hole_id: currentRabbitHole.id, 
           action_type: 'next_step' 
         },
       });
+      
+      const response = await Promise.race([functionPromise, timeoutPromise]) as any;
 
       if (response.error) throw response.error;
 
