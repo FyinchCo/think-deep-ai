@@ -326,9 +326,9 @@ const CognitiveLab = () => {
     setIsProcessing(true);
     
     try {
-      // Add timeout and retry logic for better reliability
+      // Add timeout and retry logic for better reliability - grounding panel needs longer timeout
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Function call timed out')), 120000) // 2 minute timeout
+        setTimeout(() => reject(new Error('Function call timed out')), 300000) // 5 minute timeout for grounding panel
       );
       
       const functionPromise = supabase.functions.invoke('grounding-panel-step', {
