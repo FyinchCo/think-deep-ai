@@ -91,65 +91,86 @@ serve(async (req) => {
       throw new Error(`Failed to fetch previous answers: ${answersError.message}`);
     }
 
-    // Get the absolute maximum step number to avoid conflicts
-    const { data: maxStepData, error: maxStepError } = await supabase
-      .from('answers')
-      .select('step_number')
-      .eq('rabbit_hole_id', rabbit_hole_id)
-      .order('step_number', { ascending: false })
-      .limit(1);
-
-    if (maxStepError) {
-      throw new Error(`Failed to fetch max step number: ${maxStepError.message}`);
-    }
-
-    const lastStepNumber = maxStepData?.length > 0 ? maxStepData[0].step_number : 0;
-    const nextStepNumber = lastStepNumber + 1;
-
     // Build context from previous answers
     const recentAnswers = previousAnswers?.slice(-5) || [];
     const context = recentAnswers.length > 0 
       ? recentAnswers.map(a => `Step ${a.step_number}: ${a.answer_text}`).join('\n\n')
       : 'This is the first step in the exploration.';
 
-    console.log(`Generating grounding panel step ${nextStepNumber} with ${agents.length} agents`);
+    // Get the absolute maximum step number and use atomic increment
+    let nextStepNumber: number;
+    let insertSuccess = false;
+    let maxRetries = 5;
+    let retryCount = 0;
 
-    // Generate grounding panel synthesis
-    const result = await generateGroundingPanel(
-      rabbitHole.initial_question,
-      context,
-      nextStepNumber,
-      rabbitHole.domain
-    );
+    while (!insertSuccess && retryCount < maxRetries) {
+      // Get current max step number with a fresh query each time
+      const { data: maxStepData, error: maxStepError } = await supabase
+        .from('answers')
+        .select('step_number')
+        .eq('rabbit_hole_id', rabbit_hole_id)
+        .order('step_number', { ascending: false })
+        .limit(1);
 
-    console.log(`Starting multi-agent grounding panel synthesis`);
+      if (maxStepError) {
+        throw new Error(`Failed to fetch max step number: ${maxStepError.message}`);
+      }
 
-    // Store the answer in the database
-    const { data: newAnswer, error: insertError } = await supabase
-      .from('answers')
-      .insert({
-        rabbit_hole_id: rabbit_hole_id,
-        step_number: nextStepNumber,
-        answer_text: result.synthesizedAnswer,
-        generated_at: new Date().toISOString(),
-        generator_model: 'gpt-4o',
-        generator_prompt_details: {
-          type: 'grounding_panel',
-          agents: agents.map(a => ({ name: a.name, role: a.role })),
-          proposals: result.proposals,
-          critiques: result.critiques,
-          contributions: result.contributions,
-          debate_summary: result.debateSummary
-        },
-        judge_scores: result.scores,
-        is_valid: true,
-        retry_count: 0
-      })
-      .select()
-      .single();
+      const lastStepNumber = maxStepData?.length > 0 ? maxStepData[0].step_number : 0;
+      nextStepNumber = lastStepNumber + 1;
 
-    if (insertError) {
-      throw new Error(`Failed to insert answer: ${insertError.message}`);
+      console.log(`Generating grounding panel step ${nextStepNumber} with ${agents.length} agents (attempt ${retryCount + 1})`);
+
+      // Generate grounding panel synthesis
+      const result = await generateGroundingPanel(
+        rabbitHole.initial_question,
+        context,
+        nextStepNumber,
+        rabbitHole.domain
+      );
+
+      console.log(`Starting multi-agent grounding panel synthesis`);
+
+      // Try to insert with conflict handling
+      const { data: newAnswer, error: insertError } = await supabase
+        .from('answers')
+        .insert({
+          rabbit_hole_id: rabbit_hole_id,
+          step_number: nextStepNumber,
+          answer_text: result.synthesizedAnswer,
+          generated_at: new Date().toISOString(),
+          generator_model: 'gpt-4o',
+          generator_prompt_details: {
+            type: 'grounding_panel',
+            agents: agents.map(a => ({ name: a.name, role: a.role })),
+            proposals: result.proposals,
+            critiques: result.critiques,
+            contributions: result.contributions,
+            debate_summary: result.debateSummary
+          },
+          judge_scores: result.scores,
+          is_valid: true,
+          retry_count: 0
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        if (insertError.message.includes('duplicate key value violates unique constraint')) {
+          console.log(`Step ${nextStepNumber} already exists, retrying with next number...`);
+          retryCount++;
+          continue;
+        } else {
+          throw new Error(`Failed to insert answer: ${insertError.message}`);
+        }
+      }
+
+      insertSuccess = true;
+      console.log(`Grounding panel step ${nextStepNumber} generated successfully`);
+    }
+
+    if (!insertSuccess) {
+      throw new Error(`Failed to insert answer after ${maxRetries} attempts due to concurrent step number conflicts`);
     }
 
     // Update rabbit hole status and step count
@@ -166,11 +187,8 @@ serve(async (req) => {
       throw new Error(`Failed to update rabbit hole: ${updateError.message}`);
     }
 
-    console.log(`Grounding panel step ${nextStepNumber} generated successfully`);
-
     return new Response(JSON.stringify({ 
       success: true, 
-      answer: newAnswer,
       step_number: nextStepNumber,
       type: 'grounding_panel'
     }), {
