@@ -17,8 +17,8 @@ interface AutoRunControlsProps {
   currentStep: number;
   isAutoRunning: boolean;
   onAutoRunChange: (running: boolean) => void;
-  generationMode: 'single' | 'exploration' | 'grounding';
-  onGenerationModeChange: (mode: 'single' | 'exploration' | 'grounding') => void;
+  generationMode: 'single' | 'exploration' | 'grounding' | 'cycling';
+  onGenerationModeChange: (mode: 'single' | 'exploration' | 'grounding' | 'cycling') => void;
 }
 
 export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
@@ -37,6 +37,19 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
   const [stepsCompleted, setStepsCompleted] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [autoRunStartStep, setAutoRunStartStep] = useState(0);
+  const [cyclePosition, setCyclePosition] = useState(0); // Track position in cycle
+  const [cycleStep, setCycleStep] = useState<'single' | 'exploration' | 'grounding'>('single');
+
+  // Determine current mode for cycling
+  const getCurrentMode = () => {
+    if (generationMode !== 'cycling') return generationMode;
+    
+    const pos = cyclePosition % 20; // Full cycle is 20 steps
+    if (pos < 8) return 'single';        // 0-7: Single
+    if (pos < 10) return 'exploration';  // 8-9: Discovery/Exploration  
+    if (pos < 18) return 'single';       // 10-17: Single
+    return 'grounding';                  // 18-19: Grounding
+  };
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -44,14 +57,20 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
     if (isAutoRunning && !isProcessing) {
       if (stepsCompleted < targetSteps) {
         interval = setTimeout(async () => {
-          if (generationMode === 'exploration') {
+          const currentMode = getCurrentMode();
+          
+          if (currentMode === 'exploration') {
             await onGeneratePanelStep();
-          } else if (generationMode === 'grounding') {
+          } else if (currentMode === 'grounding') {
             await onGenerateGroundingStep();
           } else {
             await onGenerateStep();
           }
+          
           setStepsCompleted(prev => prev + 1);
+          if (generationMode === 'cycling') {
+            setCyclePosition(prev => prev + 1);
+          }
         }, delayBetweenSteps * 1000);
       } else {
         // Auto-run completed
@@ -63,11 +82,14 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
     return () => {
       if (interval) clearTimeout(interval);
     };
-  }, [isAutoRunning, isProcessing, stepsCompleted, targetSteps, delayBetweenSteps, onGenerateStep, onAutoRunChange]);
+  }, [isAutoRunning, isProcessing, stepsCompleted, targetSteps, delayBetweenSteps, cyclePosition, generationMode, onGenerateStep, onGeneratePanelStep, onGenerateGroundingStep, onAutoRunChange]);
 
   const startAutoRun = () => {
     setAutoRunStartStep(currentStep);
     setStepsCompleted(0);
+    if (generationMode === 'cycling') {
+      setCyclePosition(0); // Reset cycle
+    }
     onAutoRunChange(true);
   };
 
@@ -151,6 +173,21 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
                       <p className="text-xs text-muted-foreground">Multi-agent focus on practical clarity and real-world applications</p>
                     </div>
                   </div>
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="radio"
+                      id="cycling-mode"
+                      value="cycling"
+                      checked={generationMode === 'cycling'}
+                      onChange={() => onGenerationModeChange('cycling')}
+                      disabled={isAutoRunning}
+                      className="w-4 h-4"
+                    />
+                    <div className="space-y-1">
+                      <Label htmlFor="cycling-mode" className="text-sm font-medium cursor-pointer">Cycling Mode</Label>
+                      <p className="text-xs text-muted-foreground">8 Single → 2 Discovery → 8 Single → 2 Grounding → repeat</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -191,6 +228,12 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
                 Step {currentStep}
               </Badge>
             </div>
+            {generationMode === 'cycling' && (
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Cycle Mode: {getCurrentMode()}</span>
+                <span>Cycle Step: {(cyclePosition % 20) + 1}/20</span>
+              </div>
+            )}
             <Progress value={progress} className="h-2" />
             <p className="text-xs text-muted-foreground">
               {isProcessing ? 'Generating step...' : `Next step in ${delayBetweenSteps}s`}
@@ -208,7 +251,7 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
                   className="flex-1"
                 >
                   <Play className="h-4 w-4 mr-2" />
-                  Start Auto-Run ({generationMode === 'exploration' ? 'Exploration' : generationMode === 'grounding' ? 'Grounding' : 'Single'})
+                  Start Auto-Run ({generationMode === 'cycling' ? 'Cycling' : generationMode === 'exploration' ? 'Exploration' : generationMode === 'grounding' ? 'Grounding' : 'Single'})
                 </Button>
                 <Button
                   onClick={generationMode === 'exploration' ? onGeneratePanelStep : generationMode === 'grounding' ? onGenerateGroundingStep : onGenerateStep}
@@ -243,7 +286,7 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Auto-run will generate {targetSteps} {generationMode === 'exploration' ? 'exploration panel' : generationMode === 'grounding' ? 'grounding panel' : 'single-perspective'} steps with {delayBetweenSteps} second delays between each step.
+          Auto-run will generate {targetSteps} {generationMode === 'cycling' ? 'steps cycling through modes (8 Single → 2 Discovery → 8 Single → 2 Grounding)' : generationMode === 'exploration' ? 'exploration panel' : generationMode === 'grounding' ? 'grounding panel' : 'single-perspective'} steps with {delayBetweenSteps} second delays between each step.
         </p>
       </CardContent>
     </Card>

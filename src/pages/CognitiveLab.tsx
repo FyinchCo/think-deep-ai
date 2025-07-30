@@ -50,7 +50,7 @@ const CognitiveLab = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showScores, setShowScores] = useState(false);
   const [isAutoRunning, setIsAutoRunning] = useState(false);
-  const [generationMode, setGenerationMode] = useState<'single' | 'exploration' | 'grounding'>('single');
+  const [generationMode, setGenerationMode] = useState<'single' | 'exploration' | 'grounding' | 'cycling'>('single');
   const [bookmarkedSteps, setBookmarkedSteps] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [scoreFilter, setScoreFilter] = useState('all');
