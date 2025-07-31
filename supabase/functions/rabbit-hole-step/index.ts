@@ -131,8 +131,8 @@ async function handleStartRabbitHole(rabbit_hole_id: string) {
       judge_scores: judgeResult,
       generator_prompt_details: generatedAnswer.prompt_details,
       judge_prompt_details: { /* judge prompt details */ },
-          generator_model: 'gpt-4.1-2025-04-14',
-          judge_model: 'gpt-4.1-2025-04-14',
+          generator_model: 'gpt-4o-mini',
+          judge_model: 'gpt-4o-mini',
       retry_count: 0
     })
     .select()
@@ -321,8 +321,8 @@ async function handleNextStep(rabbit_hole_id: string) {
           judge_scores: judgeResult,
           generator_prompt_details: generatedAnswer.prompt_details,
           retry_count: retryCount,
-          generator_model: 'gpt-4.1-2025-04-14',
-          judge_model: 'gpt-4.1-2025-04-14'
+          generator_model: 'gpt-4o-mini',
+          judge_model: 'gpt-4o-mini'
         })
         .select()
         .single();
@@ -425,7 +425,7 @@ Your response should be thoughtful, substantive (2-4 paragraphs), and represent 
 
   return {
     text: response,
-    prompt_details: { prompt, model: 'gpt-4.1-2025-04-14', temperature: 0.7, pressure_applied: pressure_config.cognitive_intensity }
+    prompt_details: { prompt, model: 'gpt-4o-mini', temperature: 0.7, pressure_applied: pressure_config.cognitive_intensity }
   };
 }
 
@@ -503,7 +503,7 @@ Your response should reveal a NEW layer of understanding that builds on what cam
 
   return {
     text: response,
-    prompt_details: { prompt, model: 'gpt-4.1-2025-04-14', temperature: 0.7, step_number, retry_feedback, pressure_applied: pressure_config.cognitive_intensity }
+    prompt_details: { prompt, model: 'gpt-4o-mini', temperature: 0.7, step_number, retry_feedback, pressure_applied: pressure_config.cognitive_intensity }
   };
 }
 
@@ -679,7 +679,7 @@ async function callOpenAI(prompt: string, temperature: number): Promise<string> 
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-4.1-2025-04-14',
+      model: 'gpt-4o-mini',
       messages: [
         { role: 'user', content: prompt }
       ],

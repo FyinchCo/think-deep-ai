@@ -150,7 +150,7 @@ serve(async (req) => {
           step_number: nextStepNumber,
           answer_text: result.synthesizedAnswer,
           generated_at: new Date().toISOString(),
-          generator_model: 'gpt-4.1-2025-04-14',
+          generator_model: 'gpt-4o-mini',
           generator_prompt_details: {
             type: 'grounding_panel',
             agents: agents.map(a => ({ name: a.name, role: a.role })),
@@ -307,7 +307,7 @@ Your response should be grounded, practical, and actionable. Focus on clarity an
 
 Provide your grounding perspective (200-400 words):`;
 
-  return await callAI(prompt, 'gpt-4.1-2025-04-14');
+  return await callAI(prompt, 'gpt-4o-mini');
 }
 
 async function generateAgentGroundingCritique(
@@ -343,7 +343,7 @@ Your critique should push for greater practicality, clearer examples, and strong
 
 Provide your grounding critique (150-300 words):`;
 
-  return await callAI(prompt, 'gpt-4.1-2025-04-14');
+  return await callAI(prompt, 'gpt-4o-mini');
 }
 
 async function generateGroundingSynthesis(
@@ -404,7 +404,7 @@ SCORES:
 
 Provide your grounded synthesis (400-800 words):`;
 
-  const response = await callAI(prompt, 'gpt-4.1-2025-04-14');
+  const response = await callAI(prompt, 'gpt-4o-mini');
   
   // Parse the response to extract components
   const contributions = parseAgentContributions(response);
