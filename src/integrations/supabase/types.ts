@@ -178,7 +178,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          created_at_step: number
+          created_at_step?: number
           effectiveness_score?: number | null
           id?: string
           is_active?: boolean
@@ -267,6 +267,10 @@ export type Database = {
       binary_quantize: {
         Args: { "": string } | { "": unknown }
         Returns: unknown
+      }
+      calculate_abstraction_level: {
+        Args: { text_content: string }
+        Returns: number
       }
       find_similar_answers: {
         Args: {
