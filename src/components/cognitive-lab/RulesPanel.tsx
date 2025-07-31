@@ -95,6 +95,9 @@ export const RulesPanel: React.FC<RulesPanelProps> = ({
       return;
     }
 
+    const stepToUse = currentStep && currentStep > 0 ? currentStep : 1;
+    console.log('Adding rule with currentStep:', currentStep, 'using:', stepToUse);
+
     try {
       const { data, error } = await supabase
         .from('exploration_rules')
@@ -105,7 +108,7 @@ export const RulesPanel: React.FC<RulesPanelProps> = ({
           priority: newRule.priority,
           scope: newRule.scope,
           trigger_condition: newRule.trigger_condition || null,
-          created_at_step: currentStep
+          created_at_step: stepToUse
         })
         .select()
         .single();
