@@ -757,26 +757,26 @@ async function callGrok(prompt: string, temperature: number = 0.7): Promise<stri
   return data.choices[0].message.content;
 }
 
-// AI call with fallback to Gemini and Grok
+// AI call with Grok-4 as primary, fallback to OpenAI and Gemini
 async function callAI(prompt: string, temperature: number): Promise<string> {
   try {
-    return await callOpenAI(prompt, temperature);
+    return await callGrok(prompt, temperature);
   } catch (error) {
     const errorMessage = error.message || '';
-    console.log(`OpenAI failed: ${errorMessage}`);
+    console.log(`Grok failed: ${errorMessage}`);
     
-    // Fallback to Gemini for rate limits or other errors
-    if (errorMessage.includes('429') || errorMessage.includes('rate limit')) {
-      console.log('Falling back to Gemini due to rate limit');
-      try {
-        return await callGemini(prompt, temperature);
-      } catch (geminiError) {
-        console.log(`Gemini failed: ${geminiError.message}, trying Grok`);
-        return await callGrok(prompt, temperature);
-      }
+    // Fallback to OpenAI first
+    try {
+      console.log('Falling back to OpenAI');
+      return await callOpenAI(prompt, temperature);
+    } catch (openaiError) {
+      const openaiMessage = openaiError.message || '';
+      console.log(`OpenAI failed: ${openaiMessage}`);
+      
+      // Final fallback to Gemini
+      console.log('Falling back to Gemini');
+      return await callGemini(prompt, temperature);
     }
-    
-    throw error; // Re-throw if not a rate limit error
   }
 }
 

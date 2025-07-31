@@ -557,23 +557,22 @@ async function callGrok(prompt: string): Promise<string> {
   return data.choices[0]?.message?.content || 'No response generated';
 }
 
-async function callAI(prompt: string, model: string): Promise<string> {
+async function callAI(prompt: string, model: string = 'grok-4'): Promise<string> {
   try {
-    return await callOpenAI(prompt, model);
+    return await callGrok(prompt);
   } catch (error: any) {
-    console.log('OpenAI failed:', error.message);
+    console.log('Grok failed:', error.message);
     
-    if (error.message.includes('429') || error.message.includes('rate limit') || error.message.includes('insufficient_quota')) {
-      console.log('Falling back to Gemini due to rate limit/quota');
-      try {
-        return await callGemini(prompt);
-      } catch (geminiError: any) {
-        console.log('Gemini failed:', geminiError.message);
-        console.log('Falling back to Grok');
-        return await callGrok(prompt);
-      }
+    // Fallback to OpenAI
+    try {
+      console.log('Falling back to OpenAI');
+      return await callOpenAI(prompt, 'gpt-4o-mini');
+    } catch (openaiError: any) {
+      console.log('OpenAI failed:', openaiError.message);
+      
+      // Final fallback to Gemini
+      console.log('Falling back to Gemini');
+      return await callGemini(prompt);
     }
-    
-    throw error;
   }
 }
