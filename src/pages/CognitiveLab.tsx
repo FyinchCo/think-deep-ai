@@ -1008,7 +1008,7 @@ Total steps analyzed: ${answers.length}`;
               <TabsContent value="rules" className="space-y-4">
                 <RulesPanel
                   rabbitHoleId={currentRabbitHole.id}
-                  currentStep={currentRabbitHole.total_steps}
+                  currentStep={Math.max(currentRabbitHole.total_steps, 1)}
                   onRulesChange={(updatedRules) => {
                     setRules(updatedRules);
                     explorationRules.refetchRules();
