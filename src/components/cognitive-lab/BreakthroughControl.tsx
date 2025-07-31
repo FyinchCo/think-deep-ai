@@ -28,6 +28,23 @@ export const BreakthroughControl: React.FC<BreakthroughControlProps> = ({
   answers,
   onModeActivated
 }) => {
+  // Debug logging
+  console.log('BreakthroughControl rendering:', { rabbitHoleId, currentStep, answersLength: answers?.length });
+  
+  const breakthroughDetection = useBreakthroughDetection(rabbitHoleId);
+  
+  // Handle potential undefined values
+  if (!breakthroughDetection) {
+    console.log('BreakthroughDetection hook returned undefined');
+    return (
+      <Card className="border-2 border-primary/20">
+        <CardContent className="p-6 text-center">
+          <p className="text-muted-foreground">Loading breakthrough detection...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+  
   const {
     currentMode,
     questionArchitecture,
@@ -38,7 +55,7 @@ export const BreakthroughControl: React.FC<BreakthroughControlProps> = ({
     activateBreakthroughMode,
     deactivateBreakthroughMode,
     checkBreakthroughReadiness
-  } = useBreakthroughDetection(rabbitHoleId);
+  } = breakthroughDetection;
 
   React.useEffect(() => {
     if (answers.length > 0) {
