@@ -957,6 +957,29 @@ Total steps analyzed: ${answers.length}`;
               </TabsList>
 
               <TabsContent value="exploration" className="space-y-4">
+                {/* Auto-Run Controls at top of Exploration tab */}
+                <Card className="border-primary/20">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Zap className="h-5 w-5 text-primary" />
+                      Auto-Run Controls
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <AutoRunControls
+                      isProcessing={isProcessing}
+                      onGenerateStep={generateNextStep}
+                      onGeneratePanelStep={generatePanelStep}
+                      onGenerateGroundingStep={generateGroundingStep}
+                      currentStep={currentRabbitHole.total_steps}
+                      isAutoRunning={isAutoRunning}
+                      onAutoRunChange={setIsAutoRunning}
+                      generationMode={generationMode}
+                      onGenerationModeChange={setGenerationMode}
+                    />
+                  </CardContent>
+                </Card>
+
                 <SearchAndFilter
                   searchTerm={searchTerm}
                   onSearchChange={setSearchTerm}
