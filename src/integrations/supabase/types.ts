@@ -118,6 +118,92 @@ export type Database = {
           },
         ]
       }
+      breakthrough_modes: {
+        Row: {
+          activated_at: string
+          created_at: string
+          deactivated_at: string | null
+          effectiveness_score: number | null
+          id: string
+          mode_type: string
+          parameters: Json
+          rabbit_hole_id: string
+          trigger_reason: string
+          trigger_step: number
+        }
+        Insert: {
+          activated_at?: string
+          created_at?: string
+          deactivated_at?: string | null
+          effectiveness_score?: number | null
+          id?: string
+          mode_type: string
+          parameters?: Json
+          rabbit_hole_id: string
+          trigger_reason: string
+          trigger_step: number
+        }
+        Update: {
+          activated_at?: string
+          created_at?: string
+          deactivated_at?: string | null
+          effectiveness_score?: number | null
+          id?: string
+          mode_type?: string
+          parameters?: Json
+          rabbit_hole_id?: string
+          trigger_reason?: string
+          trigger_step?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "breakthrough_modes_rabbit_hole_id_fkey"
+            columns: ["rabbit_hole_id"]
+            isOneToOne: false
+            referencedRelation: "rabbit_holes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      breakthrough_seeds: {
+        Row: {
+          breakthrough_score: number
+          created_at: string
+          domain: string
+          id: string
+          paradigm_shift_indicators: Json
+          peak_step: number | null
+          question_text: string
+          structural_elements: Json
+          total_steps: number | null
+          updated_at: string
+        }
+        Insert: {
+          breakthrough_score: number
+          created_at?: string
+          domain: string
+          id?: string
+          paradigm_shift_indicators?: Json
+          peak_step?: number | null
+          question_text: string
+          structural_elements?: Json
+          total_steps?: number | null
+          updated_at?: string
+        }
+        Update: {
+          breakthrough_score?: number
+          created_at?: string
+          domain?: string
+          id?: string
+          paradigm_shift_indicators?: Json
+          peak_step?: number | null
+          question_text?: string
+          structural_elements?: Json
+          total_steps?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       events: {
         Row: {
           answer_id: string | null
@@ -208,6 +294,90 @@ export type Database = {
         }
         Relationships: []
       }
+      paradigm_shifts: {
+        Row: {
+          answer_id: string
+          conceptual_revolution_markers: Json
+          detected_at: string
+          id: string
+          intensity_score: number
+          rabbit_hole_id: string
+          shift_type: string
+          worldview_alteration_potential: number
+        }
+        Insert: {
+          answer_id: string
+          conceptual_revolution_markers?: Json
+          detected_at?: string
+          id?: string
+          intensity_score: number
+          rabbit_hole_id: string
+          shift_type: string
+          worldview_alteration_potential: number
+        }
+        Update: {
+          answer_id?: string
+          conceptual_revolution_markers?: Json
+          detected_at?: string
+          id?: string
+          intensity_score?: number
+          rabbit_hole_id?: string
+          shift_type?: string
+          worldview_alteration_potential?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "paradigm_shifts_answer_id_fkey"
+            columns: ["answer_id"]
+            isOneToOne: false
+            referencedRelation: "answers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "paradigm_shifts_rabbit_hole_id_fkey"
+            columns: ["rabbit_hole_id"]
+            isOneToOne: false
+            referencedRelation: "rabbit_holes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      question_architecture: {
+        Row: {
+          analyzed_at: string
+          assumption_inversion_score: number
+          breakthrough_potential: number
+          constraint_paradox_score: number
+          id: string
+          meta_cognitive_score: number
+          question_text: string
+          structural_patterns: Json
+          temporal_displacement_score: number
+        }
+        Insert: {
+          analyzed_at?: string
+          assumption_inversion_score?: number
+          breakthrough_potential?: number
+          constraint_paradox_score?: number
+          id?: string
+          meta_cognitive_score?: number
+          question_text: string
+          structural_patterns?: Json
+          temporal_displacement_score?: number
+        }
+        Update: {
+          analyzed_at?: string
+          assumption_inversion_score?: number
+          breakthrough_potential?: number
+          constraint_paradox_score?: number
+          id?: string
+          meta_cognitive_score?: number
+          question_text?: string
+          structural_patterns?: Json
+          temporal_displacement_score?: number
+        }
+        Relationships: []
+      }
       rabbit_holes: {
         Row: {
           created_at: string
@@ -264,6 +434,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      analyze_question_architecture: {
+        Args: { question_text: string }
+        Returns: Json
+      }
       binary_quantize: {
         Args: { "": string } | { "": unknown }
         Returns: unknown

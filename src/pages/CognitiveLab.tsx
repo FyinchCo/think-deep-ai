@@ -26,6 +26,8 @@ import { GlobalBrillianceArchive } from "@/components/cognitive-lab/GlobalBrilli
 import { RulesPanel } from "@/components/cognitive-lab/RulesPanel";
 import { useExplorationRules } from "@/hooks/useExplorationRules";
 import { ModeEffectivenessTracker } from "@/components/cognitive-lab/ModeEffectivenessTracker";
+import { useBreakthroughDetection } from "@/hooks/useBreakthroughDetection";
+import { BreakthroughControl } from "@/components/cognitive-lab/BreakthroughControl";
 
 interface Answer {
   id: string;
@@ -110,6 +112,7 @@ const CognitiveLab = () => {
   const brillianceMetrics = useBrillianceDetection(filteredAnswers);
   const globalBrillianceMetrics = useGlobalBrillianceDetection(answers);
   const { heartbeatMetrics, conceptUsage, lastPruningStep, updateMetrics, pruneConcepts } = useMetricTracking();
+  const breakthroughDetection = useBreakthroughDetection(currentRabbitHole?.id);
 
   // Update metrics when answers change
   useEffect(() => {
@@ -149,6 +152,11 @@ const CognitiveLab = () => {
         const recentHole = recentHoles[0];
         setCurrentRabbitHole(recentHole);
         setQuestion(recentHole.initial_question);
+        
+        // Analyze question architecture for breakthrough detection
+        if (recentHole.initial_question) {
+          breakthroughDetection.analyzeQuestionArchitecture(recentHole.initial_question);
+        }
         
         toast({
           title: 'Session Restored',
@@ -209,6 +217,9 @@ const CognitiveLab = () => {
       if (rhError) throw rhError;
 
       setCurrentRabbitHole(rabbitHole);
+
+      // Analyze question architecture for breakthrough detection
+      breakthroughDetection.analyzeQuestionArchitecture(question);
 
       // Generate first step based on selected mode
       const functionName = generationMode === 'exploration' ? 'panel-step' : 
@@ -981,12 +992,20 @@ Total steps analyzed: ${answers.length}`;
                         currentStep={currentRabbitHole.total_steps}
                         onPruneConcepts={pruneConcepts}
                         lastPruningStep={lastPruningStep}
-                      />
-                    </div>
-                  </div>
-                )}
+                       />
+                     </div>
+                     
+                     {/* Breakthrough Control */}
+                     <BreakthroughControl
+                       rabbitHoleId={currentRabbitHole?.id}
+                       currentStep={currentRabbitHole?.total_steps || 0}
+                       answers={filteredAnswers}
+                       onModeActivated={(mode) => toast({ title: `${mode} mode activated`, description: "Enhanced breakthrough generation enabled" })}
+                     />
+                   </div>
+                 )}
 
-                <div className="space-y-4">
+                 <div className="space-y-4">
                   {filteredAnswers.map((answer, index) => (
                     <CollapsibleStep
                       key={answer.id}
