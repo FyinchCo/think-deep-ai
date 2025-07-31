@@ -369,37 +369,119 @@ function parseScores(text: string): Record<string, number> {
   return scores;
 }
 
-async function callAI(prompt: string, model: string = 'gpt-4o'): Promise<string> {
+async function callOpenAI(prompt: string, model: string = 'gpt-4o'): Promise<string> {
   const apiKey = Deno.env.get('OPENAI_API_KEY');
   if (!apiKey) {
     throw new Error('OpenAI API key not configured');
   }
 
-  try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: 'user', content: prompt }],
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.8,
+      max_tokens: 1000,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.text();
+    console.error('OpenAI API error:', errorData);
+    throw new Error(`OpenAI API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.choices[0]?.message?.content || 'No response generated';
+}
+
+async function callGemini(prompt: string): Promise<string> {
+  const apiKey = Deno.env.get('GEMINI_API_KEY');
+  
+  if (!apiKey) {
+    throw new Error('Gemini API key not configured');
+  }
+
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      contents: [{
+        parts: [{
+          text: prompt
+        }]
+      }],
+      generationConfig: {
         temperature: 0.8,
-        max_tokens: 1000,
-      }),
-    });
+        maxOutputTokens: 1000,
+      }
+    }),
+  });
 
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error('OpenAI API error:', errorData);
-      throw new Error(`OpenAI API error: ${response.status}`);
+  if (!response.ok) {
+    const errorData = await response.text();
+    console.error('Gemini API error:', errorData);
+    throw new Error(`Gemini API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated';
+}
+
+async function callGrok(prompt: string): Promise<string> {
+  const apiKey = Deno.env.get('XAI_API_KEY');
+  
+  if (!apiKey) {
+    throw new Error('xAI API key not configured');
+  }
+
+  const response = await fetch('https://api.x.ai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'grok-beta',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.8,
+      max_tokens: 1000,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.text();
+    console.error('Grok API error:', errorData);
+    throw new Error(`Grok API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.choices[0]?.message?.content || 'No response generated';
+}
+
+async function callAI(prompt: string, model: string = 'gpt-4o'): Promise<string> {
+  try {
+    return await callOpenAI(prompt, model);
+  } catch (error: any) {
+    console.log('OpenAI failed:', error.message);
+    
+    if (error.message.includes('429') || error.message.includes('rate limit') || error.message.includes('insufficient_quota')) {
+      console.log('Falling back to Gemini due to rate limit/quota');
+      try {
+        return await callGemini(prompt);
+      } catch (geminiError: any) {
+        console.log('Gemini failed:', geminiError.message);
+        console.log('Falling back to Grok');
+        return await callGrok(prompt);
+      }
     }
-
-    const data = await response.json();
-    return data.choices[0]?.message?.content || 'No response generated';
-  } catch (error) {
-    console.error('AI call failed:', error);
+    
     throw error;
   }
 }
