@@ -25,6 +25,7 @@ import { BrillianceMonitor } from "@/components/cognitive-lab/BrillianceMonitor"
 import { GlobalBrillianceArchive } from "@/components/cognitive-lab/GlobalBrillianceArchive";
 import { RulesPanel } from "@/components/cognitive-lab/RulesPanel";
 import { useExplorationRules } from "@/hooks/useExplorationRules";
+import { ModeEffectivenessTracker } from "@/components/cognitive-lab/ModeEffectivenessTracker";
 
 interface Answer {
   id: string;
@@ -1017,6 +1018,12 @@ Total steps analyzed: ${answers.length}`;
               </TabsContent>
 
               <TabsContent value="analytics" className="space-y-6">
+                <ModeEffectivenessTracker
+                  answers={answers}
+                  currentRabbitHoleId={currentRabbitHole.id}
+                  currentMode={generationMode === 'cycling' ? 'single' : generationMode}
+                  coherenceMetrics={coherenceMetrics}
+                />
                 <GlobalBrillianceArchive 
                   answers={answers}
                   currentStep={currentRabbitHole.total_steps}
