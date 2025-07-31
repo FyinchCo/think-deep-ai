@@ -51,6 +51,14 @@ interface CoherenceMetrics {
   recommendation: string;
 }
 
+interface QuestionContext {
+  type: 'speculative' | 'technical' | 'exploratory' | 'educational';
+  confidence: number;
+  constraints: string[];
+  intellectual_mode: string;
+  null_result_acceptable: boolean;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -92,6 +100,10 @@ async function handleStartRabbitHole(rabbit_hole_id: string) {
 
   console.log('Starting rabbit hole with question:', rabbitHole.initial_question);
 
+  // Classify the question context for metacognitive awareness
+  const questionContext = await classifyQuestionContext(rabbitHole.initial_question, rabbitHole.domain);
+  console.log('Question context classified:', JSON.stringify(questionContext));
+
   // Calculate initial pressure config
   const pressureConfig = await calculateCognitivePressure(rabbit_hole_id, 1, rabbitHole.domain);
 
@@ -103,8 +115,8 @@ async function handleStartRabbitHole(rabbit_hole_id: string) {
     console.error('Error getting rules text:', error);
   }
 
-  // Generate the first response with pressure applied
-  const generatedAnswer = await generateFirstAnswer(rabbitHole.initial_question, rabbitHole.domain, pressureConfig, rulesText);
+  // Generate the first response with context-aware pressure applied
+  const generatedAnswer = await generateFirstAnswer(rabbitHole.initial_question, rabbitHole.domain, pressureConfig, rulesText, questionContext);
 
       // Check global novelty with vector similarity
       const globalNoveltyCheck = await checkGlobalNovelty(generatedAnswer.text, rabbitHole.domain);
@@ -399,10 +411,21 @@ async function handleNextStep(rabbit_hole_id: string) {
   });
 }
 
-async function generateFirstAnswer(initial_question: string, domain: string, pressure_config: PressureConfig, rulesText?: string) {
+async function generateFirstAnswer(initial_question: string, domain: string, pressure_config: PressureConfig, rulesText?: string, questionContext?: QuestionContext) {
   const pressureInstructions = pressure_config.cognitive_intensity > 0.7 
     ? `\n\nCOGNITIVE PRESSURE APPLIED: You are expected to operate at the highest level of intellectual rigor. This exploration will be judged against the quality of existing insights in the knowledge base. Your response must be genuinely novel and profound.`
     : '';
+
+  // Context-aware intellectual mode instructions
+  let contextInstructions = '';
+  if (questionContext) {
+    contextInstructions = `\n\nCONTEXT AWARENESS: This question has been classified as ${questionContext.type.toUpperCase()} (confidence: ${questionContext.confidence}/10).
+INTELLECTUAL MODE: ${questionContext.intellectual_mode}
+KEY CONSTRAINTS: ${questionContext.constraints.join(', ')}
+NULL RESULT POLICY: ${questionContext.null_result_acceptable ? 'Acceptable to conclude "this doesn\'t work" or "we don\'t know"' : 'Always find meaningful directions to explore'}
+
+Adjust your response accordingly - be mindful of whether this requires creative speculation, technical accuracy, research methodology, or educational clarity.`;
+  }
 
   const prompt = `You are an expert in ${domain} engaged in deep intellectual exploration. You have been given this profound question to explore:
 
@@ -419,13 +442,13 @@ Your task is to provide the first step in what will become a deep intellectual j
 
 Remember: This is the beginning of an incremental journey where each subsequent step must add genuine new value. Make this first step strong and specific enough to enable meaningful progression.
 
-Your response should be thoughtful, substantive (2-4 paragraphs), and represent a clear philosophical or intellectual position that can be deepened.${pressureInstructions}${rulesText || ''}`;
+Your response should be thoughtful, substantive (2-4 paragraphs), and represent a clear philosophical or intellectual position that can be deepened.${pressureInstructions}${contextInstructions}${rulesText || ''}`;
 
   const response = await callAI(prompt, 0.7);
 
   return {
     text: response,
-    prompt_details: { prompt, model: 'gpt-4o-mini', temperature: 0.7, pressure_applied: pressure_config.cognitive_intensity }
+    prompt_details: { prompt, model: 'gpt-4o-mini', temperature: 0.7, pressure_applied: pressure_config.cognitive_intensity, context: questionContext }
   };
 }
 
@@ -1156,6 +1179,91 @@ function calculateTextSimilarity(answers: any[]): number {
   const union = new Set([...lastKeywords, ...previousKeywords]);
   
   return union.size > 0 ? intersection.size / union.size : 0;
+}
+
+// Context Classification Functions
+async function classifyQuestionContext(question: string, domain: string): Promise<QuestionContext> {
+  const prompt = `Analyze this question and classify its intellectual context. This is critical for determining the appropriate response mode and constraints.
+
+QUESTION: "${question}"
+DOMAIN: ${domain}
+
+Classify this question into ONE of these categories and determine the appropriate intellectual mode:
+
+**SPECULATIVE/FICTION**: Questions asking to imagine, "what if", explore impossible scenarios, or create fictional narratives
+- Example: "What if consciousness could transfer between bodies?"
+- Mode: Creative exploration, embrace wild possibilities, speculation is valid
+- Constraints: Internal consistency, imaginative rigor
+- Null result acceptable: No (always find something interesting to explore)
+
+**TECHNICAL/PRACTICAL**: Questions asking how to do something, solve a problem, or understand current capabilities
+- Example: "How does quantum computing work?" or "What's the best way to..."
+- Mode: Focus on current knowledge, practical constraints, accuracy over novelty
+- Constraints: Scientific accuracy, current technological limits, proven methods
+- Null result acceptable: Yes ("This isn't currently possible" is valid)
+
+**EXPLORATORY/RESEARCH**: Questions investigating open questions, frontiers of knowledge, or research directions
+- Example: "What might we discover about dark matter?" or "How could we study..."
+- Mode: Methodological rigor, identify research gaps, emphasize uncertainty
+- Constraints: Scientific method, empirical boundaries, acknowledge unknowns
+- Null result acceptable: Yes ("We don't know enough yet" is valid)
+
+**EDUCATIONAL**: Questions asking for explanation, understanding, or learning about established knowledge
+- Example: "Explain quantum mechanics" or "What is the difference between..."
+- Mode: Clear explanation, build understanding, pedagogical structure
+- Constraints: Accuracy, appropriate complexity level, established knowledge
+- Null result acceptable: Rarely (there's usually something to explain)
+
+Respond with JSON:
+{
+  "type": "<category>",
+  "confidence": <0-10>,
+  "constraints": ["<key constraint 1>", "<key constraint 2>", "<key constraint 3>"],
+  "intellectual_mode": "<brief description of how to approach this question>",
+  "null_result_acceptable": <true/false>
+}`;
+
+  try {
+    const response = await callAI(prompt, 0.2); // Low temperature for consistency
+    
+    // Clean and parse response
+    let cleanResponse = response.trim();
+    if (cleanResponse.includes('```json')) {
+      const start = cleanResponse.indexOf('```json') + 7;
+      const end = cleanResponse.lastIndexOf('```');
+      if (end > start) {
+        cleanResponse = cleanResponse.substring(start, end).trim();
+      }
+    }
+    
+    const jsonStart = cleanResponse.indexOf('{');
+    const jsonEnd = cleanResponse.lastIndexOf('}');
+    if (jsonStart !== -1 && jsonEnd !== -1) {
+      cleanResponse = cleanResponse.substring(jsonStart, jsonEnd + 1);
+    }
+    
+    const context = JSON.parse(cleanResponse) as QuestionContext;
+    
+    // Validate and normalize
+    if (!['speculative', 'technical', 'exploratory', 'educational'].includes(context.type)) {
+      context.type = 'exploratory'; // Default fallback
+    }
+    
+    context.confidence = Math.max(1, Math.min(10, context.confidence || 5));
+    
+    return context;
+    
+  } catch (error) {
+    console.error('Context classification failed:', error);
+    // Fallback to exploratory mode
+    return {
+      type: 'exploratory',
+      confidence: 5,
+      constraints: ['scientific method', 'acknowledge uncertainty', 'empirical boundaries'],
+      intellectual_mode: 'methodological exploration with uncertainty acknowledgment',
+      null_result_acceptable: true
+    };
+  }
 }
 
 // Rules System Functions
