@@ -16,7 +16,7 @@ interface Answer {
 interface ModeEffectivenessTrackerProps {
   answers: Answer[];
   currentRabbitHoleId: string;
-  currentMode: 'single' | 'exploration' | 'grounding';
+  currentMode: 'single' | 'exploration' | 'grounding' | 'devils_advocate';
   coherenceMetrics?: {
     qualityTrend: 'improving' | 'declining' | 'stable';
     saturationRisk: 'low' | 'medium' | 'high';
@@ -37,6 +37,7 @@ export const ModeEffectivenessTracker: React.FC<ModeEffectivenessTrackerProps> =
     single: { count: number; avgCoherence: number; avgAbstraction: number };
     exploration: { count: number; avgCoherence: number; avgAbstraction: number };
     grounding: { count: number; avgCoherence: number; avgAbstraction: number };
+    devils_advocate?: { count: number; avgCoherence: number; avgAbstraction: number };
   }>({
     single: { count: 0, avgCoherence: 0, avgAbstraction: 0 },
     exploration: { count: 0, avgCoherence: 0, avgAbstraction: 0 },
@@ -77,7 +78,7 @@ export const ModeEffectivenessTracker: React.FC<ModeEffectivenessTrackerProps> =
         await logModeTransition({
           step_id: latestAnswer.id,
           rabbit_hole_id: currentRabbitHoleId,
-          mode: currentMode,
+          mode: currentMode === 'devils_advocate' ? 'single' : currentMode, // Map devils_advocate to single for DB compatibility
           coherence_before: coherenceBefore,
           abstraction_level: abstractionLevel,
           transition_reason: 'user_selected'
@@ -135,6 +136,7 @@ export const ModeEffectivenessTracker: React.FC<ModeEffectivenessTrackerProps> =
       case 'single': return 'bg-blue-500';
       case 'exploration': return 'bg-green-500';
       case 'grounding': return 'bg-orange-500';
+      case 'devils_advocate': return 'bg-red-500';
       default: return 'bg-gray-500';
     }
   };

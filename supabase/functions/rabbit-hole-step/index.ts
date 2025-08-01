@@ -65,14 +65,14 @@ serve(async (req) => {
   }
 
   try {
-    const { rabbit_hole_id, action_type = 'next_step' } = await req.json();
+    const { rabbit_hole_id, action_type = 'next_step', generation_mode } = await req.json();
 
-    console.log(`Processing ${action_type} for rabbit hole: ${rabbit_hole_id}`);
+    console.log(`Processing ${action_type} for rabbit hole: ${rabbit_hole_id} with mode: ${generation_mode}`);
 
     if (action_type === 'start') {
-      return await handleStartRabbitHole(rabbit_hole_id);
+      return await handleStartRabbitHole(rabbit_hole_id, generation_mode);
     } else if (action_type === 'next_step') {
-      return await handleNextStep(rabbit_hole_id);
+      return await handleNextStep(rabbit_hole_id, generation_mode);
     }
 
     throw new Error('Invalid action_type');
@@ -86,7 +86,7 @@ serve(async (req) => {
   }
 });
 
-async function handleStartRabbitHole(rabbit_hole_id: string) {
+async function handleStartRabbitHole(rabbit_hole_id: string, generation_mode?: string) {
   // Get the rabbit hole details
   const { data: rabbitHole, error: rhError } = await supabase
     .from('rabbit_holes')
@@ -116,7 +116,7 @@ async function handleStartRabbitHole(rabbit_hole_id: string) {
   }
 
   // Generate the first response with context-aware pressure applied
-  const generatedAnswer = await generateFirstAnswer(rabbitHole.initial_question, rabbitHole.domain, pressureConfig, rulesText, questionContext);
+  const generatedAnswer = await generateFirstAnswer(rabbitHole.initial_question, rabbitHole.domain, pressureConfig, rulesText, questionContext, generation_mode);
 
       // Check global novelty with vector similarity
       const globalNoveltyCheck = await checkGlobalNovelty(generatedAnswer.text, rabbitHole.domain);
@@ -187,7 +187,7 @@ async function handleStartRabbitHole(rabbit_hole_id: string) {
   });
 }
 
-async function handleNextStep(rabbit_hole_id: string) {
+async function handleNextStep(rabbit_hole_id: string, generation_mode?: string) {
   console.log(`HandleNextStep called for rabbit hole: ${rabbit_hole_id}`);
   
   // Get rabbit hole and last answer with proper error handling
@@ -284,7 +284,8 @@ async function handleNextStep(rabbit_hole_id: string) {
         pressure_config: pressureConfig,
         coherence_metrics: coherenceMetrics,
         user_comments: recentAnswers || [],
-        rulesText
+        rulesText,
+        generation_mode
       });
 
       // Check global novelty with vector similarity
@@ -411,9 +412,14 @@ async function handleNextStep(rabbit_hole_id: string) {
   });
 }
 
-async function generateFirstAnswer(initial_question: string, domain: string, pressure_config: PressureConfig, rulesText?: string, questionContext?: QuestionContext) {
+async function generateFirstAnswer(initial_question: string, domain: string, pressure_config: PressureConfig, rulesText?: string, questionContext?: QuestionContext, generation_mode?: string) {
   const pressureInstructions = pressure_config.cognitive_intensity > 0.7 
     ? `\n\nCOGNITIVE PRESSURE APPLIED: You are expected to operate at the highest level of intellectual rigor. This exploration will be judged against the quality of existing insights in the knowledge base. Your response must be genuinely novel and profound.`
+    : '';
+
+  // Add devil's advocate mode instructions
+  const devilsAdvocateInstructions = generation_mode === 'devils_advocate' 
+    ? `\n\nDEVIL'S ADVOCATE MODE: Your role is to be intellectually skeptical. Challenge conventional assumptions, point out potential flaws in reasoning, propose mundane explanations for apparent insights, and demand rigorous evidence. Question the very foundation of the exploration itself.`
     : '';
 
   // Context-aware intellectual mode instructions
@@ -442,7 +448,7 @@ Your task is to provide the first step in what will become a deep intellectual j
 
 Remember: This is the beginning of an incremental journey where each subsequent step must add genuine new value. Make this first step strong and specific enough to enable meaningful progression.
 
-Your response should be thoughtful, substantive (2-4 paragraphs), and represent a clear philosophical or intellectual position that can be deepened.${pressureInstructions}${contextInstructions}${rulesText || ''}`;
+Your response should be thoughtful, substantive (2-4 paragraphs), and represent a clear philosophical or intellectual position that can be deepened.${pressureInstructions}${contextInstructions}${devilsAdvocateInstructions}${rulesText || ''}`;
 
   const response = await callAI(prompt, 0.7);
 
@@ -452,7 +458,7 @@ Your response should be thoughtful, substantive (2-4 paragraphs), and represent 
   };
 }
 
-async function generateNextAnswer({ initial_question, previous_answer, step_number, domain, retry_feedback, pressure_config, coherence_metrics, user_comments, rulesText }: {
+async function generateNextAnswer({ initial_question, previous_answer, step_number, domain, retry_feedback, pressure_config, coherence_metrics, user_comments, rulesText, generation_mode }: {
   initial_question: string;
   previous_answer: string;
   step_number: number;
@@ -462,6 +468,7 @@ async function generateNextAnswer({ initial_question, previous_answer, step_numb
   coherence_metrics?: CoherenceMetrics;
   user_comments?: any[];
   rulesText?: string;
+  generation_mode?: string;
 }) {
   const pressureInstructions = pressure_config.cognitive_intensity > 0.7 
     ? `\n\nCOGNITIVE PRESSURE APPLIED (Level ${pressure_config.cognitive_intensity.toFixed(1)}): You are operating under heightened intellectual demands. This step will be judged against breakthrough-level standards. Seek paradigm-shifting insights that transcend conventional reasoning.`
@@ -469,6 +476,11 @@ async function generateNextAnswer({ initial_question, previous_answer, step_numb
 
   const noveltyBoost = pressure_config.novelty_pressure > 0.8 
     ? '\n7. **Paradigm Challenge**: Question fundamental assumptions underlying previous steps'
+    : '';
+
+  // Add devil's advocate mode instructions
+  const devilsAdvocateInstructions = generation_mode === 'devils_advocate' 
+    ? `\n\nDEVIL'S ADVOCATE MODE: Challenge the previous insight rigorously. Identify its weakest assumptions, propose simpler explanations, point out logical gaps, and question whether this direction is productive. Be intellectually skeptical while maintaining constructive criticism.`
     : '';
 
   // Add coherence guidance based on saturation risk
@@ -520,7 +532,7 @@ PROHIBITED ACTIONS:
 - Simply expanding without adding new depth
 - Accepting conventional wisdom without challenge
 
-Your response should reveal a NEW layer of understanding that builds on what came before while advancing the exploration meaningfully.${pressureInstructions}${coherenceGuidance}${userGuidanceContext}${rulesText || ''}`;
+Your response should reveal a NEW layer of understanding that builds on what came before while advancing the exploration meaningfully.${pressureInstructions}${coherenceGuidance}${userGuidanceContext}${devilsAdvocateInstructions}${rulesText || ''}`;
 
   const response = await callAI(prompt, 0.7);
 

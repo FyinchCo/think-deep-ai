@@ -17,8 +17,8 @@ interface AutoRunControlsProps {
   currentStep: number;
   isAutoRunning: boolean;
   onAutoRunChange: (running: boolean) => void;
-  generationMode: 'single' | 'exploration' | 'grounding' | 'cycling';
-  onGenerationModeChange: (mode: 'single' | 'exploration' | 'grounding' | 'cycling') => void;
+  generationMode: 'single' | 'exploration' | 'grounding' | 'cycling' | 'devils_advocate';
+  onGenerationModeChange: (mode: 'single' | 'exploration' | 'grounding' | 'cycling' | 'devils_advocate') => void;
 }
 
 export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
@@ -176,6 +176,21 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
                   <div className="flex items-center space-x-3">
                     <input
                       type="radio"
+                      id="devils-advocate-mode"
+                      value="devils_advocate"
+                      checked={generationMode === 'devils_advocate'}
+                      onChange={() => onGenerationModeChange('devils_advocate')}
+                      disabled={isAutoRunning}
+                      className="w-4 h-4"
+                    />
+                    <div className="space-y-1">
+                      <Label htmlFor="devils-advocate-mode" className="text-sm font-medium cursor-pointer">Devil's Advocate</Label>
+                      <p className="text-xs text-muted-foreground">Challenge breakthrough ideas with skeptical counterarguments</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="radio"
                       id="cycling-mode"
                       value="cycling"
                       checked={generationMode === 'cycling'}
@@ -251,7 +266,7 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
                   className="flex-1"
                 >
                   <Play className="h-4 w-4 mr-2" />
-                  Start Auto-Run ({generationMode === 'cycling' ? 'Cycling' : generationMode === 'exploration' ? 'Exploration' : generationMode === 'grounding' ? 'Grounding' : 'Single'})
+                  Start Auto-Run ({generationMode === 'cycling' ? 'Cycling' : generationMode === 'exploration' ? 'Exploration' : generationMode === 'grounding' ? 'Grounding' : generationMode === 'devils_advocate' ? 'Devil\'s Advocate' : 'Single'})
                 </Button>
                 <Button
                   onClick={generationMode === 'exploration' ? onGeneratePanelStep : generationMode === 'grounding' ? onGenerateGroundingStep : onGenerateStep}
@@ -286,7 +301,7 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Auto-run will generate {targetSteps} {generationMode === 'cycling' ? 'steps cycling through modes (8 Single → 2 Discovery → 8 Single → 2 Grounding)' : generationMode === 'exploration' ? 'exploration panel' : generationMode === 'grounding' ? 'grounding panel' : 'single-perspective'} steps with {delayBetweenSteps} second delays between each step.
+          Auto-run will generate {targetSteps} {generationMode === 'cycling' ? 'steps cycling through modes (8 Single → 2 Discovery → 8 Single → 2 Grounding)' : generationMode === 'exploration' ? 'exploration panel' : generationMode === 'grounding' ? 'grounding panel' : generationMode === 'devils_advocate' ? 'devil\'s advocate' : 'single-perspective'} steps with {delayBetweenSteps} second delays between each step.
         </p>
       </CardContent>
     </Card>

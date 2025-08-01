@@ -243,7 +243,7 @@ async function generateWithBreakthroughPressure({
   model_preference = 'multi'
 }: { 
   prompt: string; 
-  mode_type: 'cascade' | 'paradigm_shift' | 'productive_chaos' | 'normal';
+  mode_type: 'cascade' | 'paradigm_shift' | 'productive_chaos' | 'devils_advocate' | 'normal';
   temperature?: number;
   model_preference?: 'gpt' | 'claude' | 'multi';
 }) {
@@ -278,6 +278,17 @@ async function generateWithBreakthroughPressure({
 - Allow stream-of-consciousness intellectual exploration
 - Embrace confusion as a pathway to breakthrough
 - Prioritize novelty over comprehensibility`;
+      break;
+      
+    case 'devils_advocate':
+      enhancedPrompt += `\n\nDEVIL'S ADVOCATE MODE ACTIVE:
+- Challenge the most recent breakthrough or high-scoring insights
+- Identify the weakest assumptions and logical gaps
+- Propose mundane, conventional explanations for apparent breakthroughs
+- Question the methodology and reasoning process itself
+- Force intellectual rigor by playing skeptical counterpoint
+- Highlight confirmation bias and wishful thinking
+- Demand evidence for extraordinary claims`;
       break;
   }
 

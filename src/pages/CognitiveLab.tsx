@@ -55,7 +55,7 @@ const CognitiveLab = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showScores, setShowScores] = useState(false);
   const [isAutoRunning, setIsAutoRunning] = useState(false);
-  const [generationMode, setGenerationMode] = useState<'single' | 'exploration' | 'grounding' | 'cycling'>('single');
+  const [generationMode, setGenerationMode] = useState<'single' | 'exploration' | 'grounding' | 'cycling' | 'devils_advocate'>('single');
   const [bookmarkedSteps, setBookmarkedSteps] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [scoreFilter, setScoreFilter] = useState('all');
@@ -223,10 +223,12 @@ const CognitiveLab = () => {
 
       // Generate first step based on selected mode
       const functionName = generationMode === 'exploration' ? 'panel-step' : 
-                       generationMode === 'grounding' ? 'grounding-panel-step' : 
-                       'rabbit-hole-step';
-      const body = generationMode !== 'single' 
+                        generationMode === 'grounding' ? 'grounding-panel-step' : 
+                        'rabbit-hole-step';
+      const body = generationMode === 'exploration' || generationMode === 'grounding'
         ? { rabbit_hole_id: rabbitHole.id }
+        : generationMode === 'devils_advocate'
+        ? { rabbit_hole_id: rabbitHole.id, action_type: 'start', generation_mode: 'devils_advocate' }
         : { rabbit_hole_id: rabbitHole.id, action_type: 'start' };
       
       const response = await supabase.functions.invoke(functionName, { body });
@@ -254,6 +256,8 @@ const CognitiveLab = () => {
             ? 'Your multi-agent philosophical exploration has begun'
             : generationMode === 'grounding'
             ? 'Your multi-agent grounding exploration has begun'
+            : generationMode === 'devils_advocate'
+            ? 'Your devil\'s advocate exploration has begun'
             : 'Your philosophical exploration has begun',
         });
       } else {
@@ -837,6 +841,21 @@ Total steps analyzed: ${answers.length}`;
                       <p className="text-xs text-muted-foreground">Multi-agent focus on practical clarity and real-world applications</p>
                     </div>
                   </div>
+                  <div className="flex items-start space-x-3">
+                    <input
+                      type="radio"
+                      id="initial-devils-advocate-mode"
+                      value="devils_advocate"
+                      checked={generationMode === 'devils_advocate'}
+                      onChange={() => setGenerationMode('devils_advocate')}
+                      disabled={isProcessing}
+                      className="w-4 h-4 mt-1"
+                    />
+                    <div className="space-y-1">
+                      <Label htmlFor="initial-devils-advocate-mode" className="text-sm font-medium cursor-pointer">Devil's Advocate</Label>
+                      <p className="text-xs text-muted-foreground">Challenge breakthrough ideas with skeptical counterarguments</p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -1063,7 +1082,7 @@ Total steps analyzed: ${answers.length}`;
                 <ModeEffectivenessTracker
                   answers={answers}
                   currentRabbitHoleId={currentRabbitHole.id}
-                  currentMode={generationMode === 'cycling' ? 'single' : generationMode}
+                  currentMode={generationMode === 'cycling' ? 'single' : (generationMode === 'devils_advocate' ? 'single' : generationMode)}
                   coherenceMetrics={coherenceMetrics}
                 />
                 <GlobalBrillianceArchive 
