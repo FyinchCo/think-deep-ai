@@ -11,6 +11,7 @@ const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const openaiApiKey = Deno.env.get('OPENAI_API_KEY')!;
 const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY')!;
+const grokApiKey = Deno.env.get('GROK_API_KEY');
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -292,9 +293,25 @@ async function generateWithBreakthroughPressure({
       break;
   }
 
-  // Model ensemble for peak performance
+  // Model ensemble for peak performance - Grok → Claude → OpenAI
   if (model_preference === 'multi') {
-    // Try Claude first for creative breakthroughs, fallback to GPT
+    // Try Grok first for breakthrough analysis
+    try {
+      if (grokApiKey) {
+        const grokResponse = await callGrok(enhancedPrompt, temperature);
+        return new Response(JSON.stringify({
+          success: true,
+          text: grokResponse,
+          model_used: 'grok-4-latest'
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    } catch (error) {
+      console.log('Grok failed, falling back to Claude:', error.message);
+    }
+    
+    // Fallback to Claude
     try {
       if (anthropicApiKey) {
         const claudeResponse = await callClaude(enhancedPrompt, temperature);
@@ -416,16 +433,44 @@ async function callClaude(prompt: string, temperature: number): Promise<string> 
   return data.content[0].text;
 }
 
+async function callGrok(prompt: string, temperature: number = 0.7): Promise<string> {
+  if (!grokApiKey) {
+    throw new Error('GROK_API_KEY not found');
+  }
+
+  const response = await fetch('https://api.x.ai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${grokApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'grok-4-latest',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: temperature,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Grok API error: ${response.status} - ${errorText}`);
+  }
+
+  const data = await response.json();
+  return data.choices[0].message.content;
+}
+
 async function callAI(prompt: string, temperature: number): Promise<string> {
+  // Try Grok first
   try {
-    return await callOpenAI(prompt, temperature, 'gpt-4o');
+    return await callGrok(prompt, temperature);
   } catch (error) {
-    console.log('OpenAI failed, trying Claude:', error.message);
+    console.log('Grok failed, trying Claude:', error.message);
     try {
       return await callClaude(prompt, temperature);
     } catch (claudeError) {
-      console.log('Claude failed, falling back to GPT-4o-mini:', claudeError.message);
-      return await callOpenAI(prompt, temperature, 'gpt-4o-mini');
+      console.log('Claude failed, falling back to GPT-4o:', claudeError.message);
+      return await callOpenAI(prompt, temperature, 'gpt-4o');
     }
   }
 }
