@@ -406,7 +406,8 @@ const CognitiveLab = () => {
       const functionPromise = supabase.functions.invoke('rabbit-hole-step', {
         body: { 
           rabbit_hole_id: currentRabbitHole.id, 
-          action_type: 'next_step' 
+          action_type: 'next_step',
+          generation_mode: generationMode === 'devils_advocate' ? 'devils_advocate' : undefined
         },
       });
       
