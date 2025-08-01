@@ -139,7 +139,7 @@ ANSWER TO ANALYZE:
 CONTEXT (Previous Insights):
 ${previous_answers.slice(-3).map((a, i) => `${i + 1}. ${a}`).join('\n')}
 
-Evaluate on these exact criteria (0.0-1.0 scale):
+Evaluate on these exact criteria (0.0-1.0 scale). Be more sensitive to subtle shifts:
 
 1. **ONTOLOGICAL SHIFT**: Does this fundamentally alter what we consider to exist or be real?
 2. **EPISTEMOLOGICAL SHIFT**: Does this change how we know or validate knowledge itself?
@@ -147,6 +147,8 @@ Evaluate on these exact criteria (0.0-1.0 scale):
 4. **AXIOLOGICAL SHIFT**: Does this transform our fundamental values or what we consider worthy?
 
 5. **WORLDVIEW ALTERATION POTENTIAL**: How likely is this to change someone's entire worldview? (0.0-1.0)
+
+NOTE: Score >0.4 = significant shift, >0.6 = major paradigm shift. Be generous with scoring conceptual innovations.
 
 6. **CONCEPTUAL REVOLUTION MARKERS**: List specific phrases/concepts that indicate paradigm-shifting thinking.
 

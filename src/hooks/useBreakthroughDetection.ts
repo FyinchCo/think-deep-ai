@@ -97,8 +97,8 @@ export const useBreakthroughDetection = (rabbitHoleId?: string) => {
 
       const analysis = data.analysis;
       
-      // Update local state if significant shift detected
-      if (analysis.paradigm_shift_score >= 0.6) {
+      // Update local state if significant shift detected (lowered threshold)
+      if (analysis.paradigm_shift_score >= 0.4) {
         setState(prev => ({
           ...prev,
           detectedShifts: [...prev.detectedShifts, {
@@ -109,7 +109,7 @@ export const useBreakthroughDetection = (rabbitHoleId?: string) => {
             conceptual_revolution_markers: analysis.conceptual_revolution_markers,
             detected_at: new Date().toISOString()
           }],
-          cascadeDetected: analysis.paradigm_shift_score >= 0.8
+          cascadeDetected: analysis.paradigm_shift_score >= 0.6
         }));
       }
 
@@ -207,12 +207,30 @@ export const useBreakthroughDetection = (rabbitHoleId?: string) => {
 
     if (hasShiftIndicators) readinessScore += 0.2;
 
+    // Auto-trigger breakthrough modes based on readiness
+    const finalScore = Math.min(1, readinessScore);
+    
     setState(prev => ({
       ...prev,
-      breakthroughReadiness: Math.min(1, readinessScore)
+      breakthroughReadiness: finalScore
     }));
 
-    return Math.min(1, readinessScore);
+    // Auto-activate breakthrough modes when readiness is high
+    if (finalScore >= 0.7 && !state.currentMode && rabbitHoleId) {
+      const lastAnswer = answers[answers.length - 1];
+      if (lastAnswer) {
+        setTimeout(() => {
+          activateBreakthroughMode(
+            'cascade',
+            lastAnswer.step_number,
+            `Auto-triggered: High breakthrough readiness (${finalScore.toFixed(2)})`,
+            { auto_triggered: true, readiness_score: finalScore }
+          );
+        }, 100);
+      }
+    }
+
+    return finalScore;
   }, []);
 
   // Load current breakthrough mode on mount
