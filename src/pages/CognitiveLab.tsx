@@ -1025,6 +1025,7 @@ Total steps analyzed: ${answers.length}`;
                       onAutoRunChange={setIsAutoRunning}
                       generationMode={generationMode}
                       onGenerationModeChange={setGenerationMode}
+                      researchMode={researchMode}
                     />
                   </CardContent>
                 </Card>
@@ -1193,6 +1194,7 @@ Total steps analyzed: ${answers.length}`;
                   onAutoRunChange={setIsAutoRunning}
                   generationMode={generationMode}
                   onGenerationModeChange={setGenerationMode}
+                  researchMode={researchMode}
                 />
               </TabsContent>
             </Tabs>

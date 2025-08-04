@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { Play, Pause, Square, Settings } from 'lucide-react';
+import { Play, Pause, Square, Settings, CheckCircle } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
@@ -19,6 +19,7 @@ interface AutoRunControlsProps {
   onAutoRunChange: (running: boolean) => void;
   generationMode: 'single' | 'exploration' | 'grounding' | 'cycling' | 'devils_advocate';
   onGenerationModeChange: (mode: 'single' | 'exploration' | 'grounding' | 'cycling' | 'devils_advocate') => void;
+  researchMode: boolean;
 }
 
 export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
@@ -30,7 +31,8 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
   isAutoRunning,
   onAutoRunChange,
   generationMode,
-  onGenerationModeChange
+  onGenerationModeChange,
+  researchMode
 }) => {
   const [targetSteps, setTargetSteps] = useState(5);
   const [delayBetweenSteps, setDelayBetweenSteps] = useState(3);
@@ -251,6 +253,12 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
                <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>Cycle Mode: {getCurrentMode()}</span>
                 <span>Cycle Step: {(cyclePosition % 25) + 1}/25</span>
+              </div>
+            )}
+            {researchMode && (
+              <div className="flex items-center gap-2 text-xs text-neural">
+                <CheckCircle className="h-3 w-3" />
+                Research-Grounded Mode Active
               </div>
             )}
             <Progress value={progress} className="h-2" />
