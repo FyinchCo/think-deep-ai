@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { rabbit_hole_id } = await req.json();
+    const { rabbit_hole_id, research_mode = false } = await req.json();
     
     console.log(`Panel step generation started for rabbit hole: ${rabbit_hole_id}`);
 
@@ -138,7 +138,8 @@ Deno.serve(async (req) => {
       rabbitHole.domain,
       previousContext,
       nextStepNumber,
-      recentAnswers || []
+      recentAnswers || [],
+      research_mode
     );
 
     // Store the panel answer
@@ -204,18 +205,18 @@ Deno.serve(async (req) => {
   }
 });
 
-async function generatePanelDebate(question: string, domain: string, previousContext: string, stepNumber: number, userComments: any[] = []) {
+async function generatePanelDebate(question: string, domain: string, previousContext: string, stepNumber: number, userComments: any[] = [], researchMode: boolean = false) {
   console.log('Starting multi-agent panel debate');
 
   // Round 1: Individual agent proposals
   const agentProposals = await Promise.all(
-    agents.map(agent => generateAgentProposal(agent, question, domain, previousContext, stepNumber, userComments))
+    agents.map(agent => generateAgentProposal(agent, question, domain, previousContext, stepNumber, userComments, researchMode))
   );
 
   // Round 2: Cross-agent critiques and responses
   const agentCritiques = await Promise.all(
     agents.map((agent, index) => 
-      generateAgentCritique(agent, agentProposals, index, question, domain)
+      generateAgentCritique(agent, agentProposals, index, question, domain, researchMode)
     )
   );
 
@@ -226,19 +227,33 @@ async function generatePanelDebate(question: string, domain: string, previousCon
     agentProposals, 
     agentCritiques, 
     previousContext,
-    stepNumber
+    stepNumber,
+    researchMode
   );
 
   return finalSynthesis;
 }
 
-async function generateAgentProposal(agent: Agent, question: string, domain: string, previousContext: string, stepNumber: number, userComments: any[] = []) {
+async function generateAgentProposal(agent: Agent, question: string, domain: string, previousContext: string, stepNumber: number, userComments: any[] = [], researchMode: boolean = false) {
+  
+  const researchModePrompt = researchMode ? `
+
+RESEARCH MODE ACTIVE: Your response must include:
+1. EVIDENCE REQUIREMENTS: Cite at least 2-3 real studies, documented cases, or empirical examples to support your claims
+2. PRACTICAL IMPLEMENTATION: Provide concrete, actionable steps with timelines or cost estimates where relevant  
+3. CITATION CHECKING: Reference specific frameworks, methodologies, or established practices
+4. AVOID SPECULATION: Flag when moving beyond documented evidence with phrases like "Based on evidence..." or "Research suggests..."
+5. ACCESSIBILITY: Explain complex concepts in simple terms that a general audience can understand
+
+Your role as ${agent.name} now emphasizes research rigor and evidence-based reasoning while maintaining your core personality.` : '';
+
   const prompt = `You are ${agent.name}, the ${agent.role} in a philosophical inquiry council.
 
 PERSONALITY: ${agent.personality}
 
 CONSTRAINTS:
 ${agent.constraints.map(c => `- ${c}`).join('\n')}
+${researchModePrompt}
 
 CONTEXT:
 Original Question: "${question}"
@@ -257,14 +272,24 @@ IMPORTANT: The user has provided specific guidance above. Consider their insight
 Current Step: ${stepNumber}
 
 As ${agent.name}, provide your perspective on how to advance this exploration. Be true to your role while building meaningfully on previous steps. Focus on ${agent.role.toLowerCase()} aspects.
+${researchMode ? 'Remember to ground your response in evidence and provide concrete examples.' : ''}
 
 Your response should be 2-3 paragraphs maximum.`;
 
   return await callAI(prompt, 'gpt-4o-mini');
 }
 
-async function generateAgentCritique(agent: Agent, proposals: string[], agentIndex: number, question: string, domain: string) {
+async function generateAgentCritique(agent: Agent, proposals: string[], agentIndex: number, question: string, domain: string, researchMode: boolean = false) {
   const otherProposals = proposals.filter((_, index) => index !== agentIndex);
+  
+  const researchCritique = researchMode ? `
+
+RESEARCH MODE CRITIQUE FOCUS:
+- Challenge claims that lack evidence or proper citations
+- Identify where practical implementation details are missing
+- Point out areas where jargon or complexity could be simplified
+- Request specific studies or examples to support abstract concepts
+- Suggest concrete ways to test or validate the proposed ideas` : '';
   
   const prompt = `You are ${agent.name}, the ${agent.role}.
 
@@ -273,13 +298,26 @@ Review these proposals from other council members:
 ${otherProposals.map((proposal, i) => `Proposal ${i + 1}:\n${proposal}`).join('\n\n')}
 
 As ${agent.name}, provide constructive critique and identify key tensions or synergies. What would you refine, challenge, or build upon? Stay true to your role as ${agent.role}.
+${researchCritique}
+${researchMode ? 'Focus especially on evidence quality and practical implementation.' : ''}
 
 Keep your critique to 1-2 paragraphs.`;
 
   return await callAI(prompt, 'gpt-4o-mini');
 }
 
-async function generatePanelSynthesis(question: string, domain: string, proposals: string[], critiques: string[], previousContext: string, stepNumber: number) {
+async function generatePanelSynthesis(question: string, domain: string, proposals: string[], critiques: string[], previousContext: string, stepNumber: number, researchMode: boolean = false) {
+  
+  const researchSynthesis = researchMode ? `
+
+RESEARCH MODE SYNTHESIS REQUIREMENTS:
+- Include a "EVIDENCE BASE" section citing all studies, frameworks, and documented examples mentioned
+- Add a "PRACTICAL IMPLEMENTATION" section with concrete steps, timelines, and resource requirements
+- Include a "VERIFICATION METHODS" section explaining how claims could be tested or validated
+- Ensure all claims are either evidence-backed or clearly marked as speculation
+- Translate any jargon into accessible language
+- Add PRACTICALITY and EVIDENCE scores alongside traditional metrics` : '';
+
   const prompt = `You are synthesizing a multi-agent panel debate for step ${stepNumber} of exploring: "${question}"
 
 AGENT PROPOSALS:
@@ -290,17 +328,28 @@ ${critiques.map((critique, i) => `${agents[i].name}'s Critique:\n${critique}`).j
 
 PREVIOUS CONTEXT:
 ${previousContext}
+${researchSynthesis}
 
 Synthesize this debate into a coherent advancement of the exploration. The output should:
 1. Integrate the strongest insights from all agents
 2. Address key tensions raised in critiques
 3. Build meaningfully on previous steps
 4. Open new pathways for future exploration
+${researchMode ? '5. Ground all insights in evidence and provide practical implementation guidance' : ''}
 
 Provide your synthesis in this format:
 
 SYNTHESIS:
 [2-3 paragraphs integrating the panel debate into a coherent next step]
+${researchMode ? `
+EVIDENCE BASE:
+[List all studies, frameworks, and documented examples referenced]
+
+PRACTICAL IMPLEMENTATION:
+[Concrete steps with timelines and resource requirements]
+
+VERIFICATION METHODS:
+[How claims could be tested or validated]` : ''}
 
 AGENT CONTRIBUTIONS:
 - Builder: [1 sentence summary]
@@ -316,7 +365,8 @@ SCORES:
 Novelty: [1-10]
 Depth: [1-10]
 Coherence: [1-10]
-Relevance: [1-10]`;
+Relevance: [1-10]
+${researchMode ? 'Practicality: [1-10]\nEvidence: [1-10]' : ''}`;
 
   const response = await callAI(prompt, 'gpt-4o-mini');
   

@@ -56,6 +56,7 @@ const CognitiveLab = () => {
   const [showScores, setShowScores] = useState(false);
   const [isAutoRunning, setIsAutoRunning] = useState(false);
   const [generationMode, setGenerationMode] = useState<'single' | 'exploration' | 'grounding' | 'cycling' | 'devils_advocate'>('single');
+  const [researchMode, setResearchMode] = useState(false);
   const [bookmarkedSteps, setBookmarkedSteps] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [scoreFilter, setScoreFilter] = useState('all');
@@ -226,10 +227,10 @@ const CognitiveLab = () => {
                         generationMode === 'grounding' ? 'grounding-panel-step' : 
                         'rabbit-hole-step';
       const body = generationMode === 'exploration' || generationMode === 'grounding'
-        ? { rabbit_hole_id: rabbitHole.id }
+        ? { rabbit_hole_id: rabbitHole.id, research_mode: researchMode }
         : generationMode === 'devils_advocate'
-        ? { rabbit_hole_id: rabbitHole.id, action_type: 'start', generation_mode: 'devils_advocate' }
-        : { rabbit_hole_id: rabbitHole.id, action_type: 'start' };
+        ? { rabbit_hole_id: rabbitHole.id, action_type: 'start', generation_mode: 'devils_advocate', research_mode: researchMode }
+        : { rabbit_hole_id: rabbitHole.id, action_type: 'start', research_mode: researchMode };
       
       const response = await supabase.functions.invoke(functionName, { body });
 
@@ -291,7 +292,7 @@ const CognitiveLab = () => {
       );
       
       const functionPromise = supabase.functions.invoke('panel-step', {
-        body: { rabbit_hole_id: currentRabbitHole.id }
+        body: { rabbit_hole_id: currentRabbitHole.id, research_mode: researchMode }
       });
       
       const { data, error } = await Promise.race([functionPromise, timeoutPromise]) as any;
@@ -348,7 +349,7 @@ const CognitiveLab = () => {
       );
       
       const functionPromise = supabase.functions.invoke('grounding-panel-step', {
-        body: { rabbit_hole_id: currentRabbitHole.id }
+        body: { rabbit_hole_id: currentRabbitHole.id, research_mode: researchMode }
       });
       
       const { data, error } = await Promise.race([functionPromise, timeoutPromise]) as any;
@@ -407,7 +408,8 @@ const CognitiveLab = () => {
         body: { 
           rabbit_hole_id: currentRabbitHole.id, 
           action_type: 'next_step',
-          generation_mode: generationMode === 'devils_advocate' ? 'devils_advocate' : undefined
+          generation_mode: generationMode === 'devils_advocate' ? 'devils_advocate' : undefined,
+          research_mode: researchMode
         },
       });
       
@@ -793,6 +795,33 @@ Total steps analyzed: ${answers.length}`;
                 </div>
               </div>
 
+              {/* Research Mode Toggle */}
+              <div className="space-y-3 p-4 border rounded-lg border-neural/20 bg-gradient-to-r from-background to-neural-accent/10">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium">Research-Grounded Mode</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Require evidence, citations, and practical implementation for all insights
+                    </p>
+                  </div>
+                  <Switch
+                    checked={researchMode}
+                    onCheckedChange={setResearchMode}
+                    className="data-[state=checked]:bg-neural-accent"
+                  />
+                </div>
+                {researchMode && (
+                  <div className="p-3 bg-neural-accent/5 rounded border border-neural-accent/20">
+                    <p className="text-xs text-muted-foreground">
+                      ✓ Evidence requirements active<br/>
+                      ✓ Citation checking enabled<br/>
+                      ✓ Practical implementation gates<br/>
+                      ✓ Jargon translation prompts
+                    </p>
+                  </div>
+                )}
+              </div>
+
               {/* Generation Mode Selection */}
               <div className="space-y-3 p-4 border rounded-lg border-neural/20 bg-gradient-to-r from-background to-neural/5">
                 <Label className="text-sm font-medium">Generation Mode</Label>
@@ -1039,12 +1068,72 @@ Total steps analyzed: ${answers.length}`;
                      </div>
                      
                      {/* Breakthrough Control */}
-                     <BreakthroughControl
-                       rabbitHoleId={currentRabbitHole?.id}
-                       currentStep={currentRabbitHole?.total_steps || 0}
-                       answers={filteredAnswers}
-                       onModeActivated={(mode) => toast({ title: `${mode} mode activated`, description: "Enhanced breakthrough generation enabled" })}
-                     />
+                      <BreakthroughControl
+                        rabbitHoleId={currentRabbitHole?.id}
+                        currentStep={currentRabbitHole?.total_steps || 0}
+                        answers={filteredAnswers}
+                        onModeActivated={(mode) => toast({ title: `${mode} mode activated`, description: "Enhanced breakthrough generation enabled" })}
+                      />
+                      
+                      {/* Research Mode Indicator */}
+                      {researchMode && (
+                        <Card className="border-neural-accent/30 bg-neural-accent/5">
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-sm flex items-center gap-2">
+                              <Eye className="h-4 w-4 text-neural-accent" />
+                              Research Mode Active
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="pt-0">
+                            <div className="text-xs text-muted-foreground space-y-1">
+                              <div className="flex items-center gap-2">
+                                <CheckCircle className="h-3 w-3 text-green-500" />
+                                Evidence requirements enforced
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <CheckCircle className="h-3 w-3 text-green-500" />
+                                Citation checking active
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <CheckCircle className="h-3 w-3 text-green-500" />
+                                Practical implementation required
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <CheckCircle className="h-3 w-3 text-green-500" />
+                                Jargon translation enabled
+                              </div>
+                            </div>
+                            {filteredAnswers.length > 0 && (
+                              <div className="mt-3 pt-3 border-t border-neural-accent/20">
+                                <p className="text-xs font-medium mb-1">Research Quality Score</p>
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 bg-neural-accent/10 rounded-full h-2">
+                                    <div 
+                                      className="bg-neural-accent h-2 rounded-full transition-all" 
+                                      style={{ 
+                                        width: `${Math.min(100, (filteredAnswers.reduce((acc, answer) => {
+                                          const scores = answer.judge_scores;
+                                          const evidenceScore = scores?.evidence || scores?.research_rigor || 7;
+                                          const practicalityScore = scores?.practicality || scores?.actionability || 7;
+                                          return acc + (evidenceScore + practicalityScore) / 2;
+                                        }, 0) / filteredAnswers.length) * 10)}%` 
+                                      }}
+                                    />
+                                  </div>
+                                  <span className="text-xs text-muted-foreground">
+                                    {Math.round((filteredAnswers.reduce((acc, answer) => {
+                                      const scores = answer.judge_scores;
+                                      const evidenceScore = scores?.evidence || scores?.research_rigor || 7;
+                                      const practicalityScore = scores?.practicality || scores?.actionability || 7;
+                                      return acc + (evidenceScore + practicalityScore) / 2;
+                                    }, 0) / filteredAnswers.length) * 10) / 10}/10
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      )}
                    </div>
                  )}
 

@@ -98,6 +98,22 @@ export const CollapsibleStep: React.FC<CollapsibleStepProps> = ({
               <span className={`font-medium ${getScoreColor(answer.judge_scores.relevance)}`}>
                 R:{answer.judge_scores.relevance}
               </span>
+              {/* Research Mode Scores */}
+              {answer.judge_scores.evidence && (
+                <span className={`font-medium ${getScoreColor(answer.judge_scores.evidence)} text-neural-accent`}>
+                  E:{answer.judge_scores.evidence}
+                </span>
+              )}
+              {answer.judge_scores.practicality && (
+                <span className={`font-medium ${getScoreColor(answer.judge_scores.practicality)} text-neural-accent`}>
+                  P:{answer.judge_scores.practicality}
+                </span>
+              )}
+              {answer.judge_scores.research_rigor && (
+                <span className={`font-medium ${getScoreColor(answer.judge_scores.research_rigor)} text-neural-accent`}>
+                  RR:{answer.judge_scores.research_rigor}
+                </span>
+              )}
               {answer.judge_scores.breakthrough_potential && (
                 <span className={`font-medium ${getScoreColor(answer.judge_scores.breakthrough_potential)} text-xs bg-neural/10 px-1 rounded`}>
                   BT:{answer.judge_scores.breakthrough_potential}

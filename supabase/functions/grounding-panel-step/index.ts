@@ -55,7 +55,7 @@ serve(async (req) => {
   }
 
   try {
-    const { rabbit_hole_id } = await req.json();
+    const { rabbit_hole_id, research_mode = false } = await req.json();
     
     if (!rabbit_hole_id) {
       throw new Error('rabbit_hole_id is required');
@@ -137,7 +137,8 @@ serve(async (req) => {
       context,
       nextStepNumber,
       rabbitHole.domain,
-      recentAnswers || []
+      recentAnswers || [],
+      research_mode
     );
 
       console.log(`Starting multi-agent grounding panel synthesis`);
@@ -223,7 +224,8 @@ async function generateGroundingPanel(
   context: string,
   stepNumber: number,
   domain: string,
-  userComments: any[] = []
+  userComments: any[] = [],
+  researchMode: boolean = false
 ): Promise<{
   synthesizedAnswer: string;
   proposals: any[];
@@ -238,7 +240,7 @@ async function generateGroundingPanel(
   const proposals = [];
   
   for (const agent of agents) {
-    const proposal = await generateAgentGroundingProposal(agent, initialQuestion, context, stepNumber, domain, userComments);
+    const proposal = await generateAgentGroundingProposal(agent, initialQuestion, context, stepNumber, domain, userComments, researchMode);
     proposals.push({
       agent: agent.name,
       content: proposal
@@ -251,7 +253,7 @@ async function generateGroundingPanel(
   
   for (const agent of agents) {
     const otherProposals = proposals.filter(p => p.agent !== agent.name);
-    const critique = await generateAgentGroundingCritique(agent, otherProposals, initialQuestion, context);
+    const critique = await generateAgentGroundingCritique(agent, otherProposals, initialQuestion, context, researchMode);
     critiques.push({
       agent: agent.name,
       content: critique
@@ -260,7 +262,7 @@ async function generateGroundingPanel(
 
   // Round 3: Synthesize into a grounded, practical answer
   console.log('Round 3: Synthesizing grounded answer');
-  const synthesis = await generateGroundingSynthesis(proposals, critiques, initialQuestion, context, stepNumber);
+  const synthesis = await generateGroundingSynthesis(proposals, critiques, initialQuestion, context, stepNumber, researchMode);
   
   return synthesis;
 }
@@ -271,7 +273,8 @@ async function generateAgentGroundingProposal(
   context: string,
   stepNumber: number,
   domain: string,
-  userComments: any[] = []
+  userComments: any[] = [],
+  researchMode: boolean = false
 ): Promise<string> {
   
   const prompt = `You are ${agent.name}, ${agent.role}.
@@ -295,6 +298,13 @@ ${userComments.map(comment =>
 
 IMPORTANT: The user has provided specific guidance above. Consider their insights and directions carefully as you develop your grounding perspective. Their guidance represents valuable human perspective that should influence how you make concepts practical and concrete.` : ''}
 
+${researchMode ? `RESEARCH MODE ENHANCED: In addition to your grounding role, you must now:
+- Cite at least 2 specific studies, frameworks, or documented examples
+- Provide evidence-based reasoning for all claims
+- Include practical implementation timelines and resource estimates
+- Explain concepts in accessible language (avoid jargon)
+- Flag any speculation with clear disclaimers` : ''}
+
 From your specific grounding perspective as ${agent.name}, provide a practical, concrete response that:
 
 1. Takes any abstract concepts from the previous context and makes them concrete
@@ -314,7 +324,8 @@ async function generateAgentGroundingCritique(
   agent: Agent,
   otherProposals: any[],
   initialQuestion: string,
-  context: string
+  context: string,
+  researchMode: boolean = false
 ): Promise<string> {
   
   const proposalsText = otherProposals.map(p => `${p.agent}: ${p.content}`).join('\n\n---\n\n');
@@ -338,8 +349,12 @@ From your perspective as ${agent.name}, critique these proposals focusing on:
 3. What real-world examples or evidence is missing?
 4. How could the practical applications be strengthened?
 5. What would make these ideas more accessible and actionable?
+${researchMode ? `6. What specific citations or evidence would strengthen claims?
+7. Where are implementation timelines or resource estimates needed?
+8. Which concepts need simpler, jargon-free explanations?` : ''}
 
 Your critique should push for greater practicality, clearer examples, and stronger real-world connections.
+${researchMode ? 'Especially focus on evidence quality and research rigor.' : ''}
 
 Provide your grounding critique (150-300 words):`;
 
@@ -351,7 +366,8 @@ async function generateGroundingSynthesis(
   critiques: any[],
   initialQuestion: string,
   context: string,
-  stepNumber: number
+  stepNumber: number,
+  researchMode: boolean = false
 ): Promise<{
   synthesizedAnswer: string;
   proposals: any[];
@@ -382,10 +398,23 @@ SYNTHESIS MISSION: Create a comprehensive, grounded response that:
 3. **Offers Actionable Steps**: Give clear, implementable guidance
 4. **Uses Accessible Language**: Explain complex ideas in simple, understandable terms
 5. **Includes Supporting Evidence**: Reference real examples, studies, or proven practices where relevant
+${researchMode ? `6. **Research Rigor**: Cite specific studies, frameworks, and documented evidence for all major claims
+7. **Implementation Details**: Provide concrete timelines, resource requirements, and measurable outcomes
+8. **Verification Methods**: Explain how claims can be tested or validated in practice` : ''}
 
 Your synthesized answer should be practical, clear, and immediately useful. Focus on grounding rather than further exploration.
+${researchMode ? 'Emphasize evidence-based reasoning and research quality throughout.' : ''}
 
 After your main synthesis, provide:
+${researchMode ? `
+EVIDENCE BASE:
+[List all studies, frameworks, and documented examples cited]
+
+PRACTICAL IMPLEMENTATION:
+[Concrete steps with timelines and resource requirements]
+
+VERIFICATION METHODS:
+[How claims could be tested or validated]` : ''}
 
 AGENT_CONTRIBUTIONS:
 [List each agent and their key contribution to the grounded understanding]
@@ -400,6 +429,7 @@ SCORES:
   "actionability": [1-10 score for how implementable the guidance is],
   "accessibility": [1-10 score for how accessible the language is],
   "evidence": [1-10 score for quality of supporting examples/evidence]
+  ${researchMode ? ',"research_rigor": [1-10 score for quality of citations and evidence]' : ''}
 }
 
 Provide your grounded synthesis (400-800 words):`;
