@@ -553,132 +553,84 @@ async function judgeAnswer({ initial_question, previous_answer, candidate_answer
 }): Promise<JudgeScores> {
   const isFirstStep = step_number === 1;
 
-  const prompt = `You are an expert judge evaluating the quality of incremental intellectual exploration in ${domain}.
+  const threshold_novelty = Math.max(pressure_config.novelty_pressure || 4, 1);
+  const threshold_depth = Math.max(pressure_config.depth_pressure || 3, 1);
+  const threshold_breakthrough = Math.max(pressure_config.breakthrough_threshold || 3, 1);
+  const pressure_applied = Math.max(pressure_config.cognitive_intensity || 1, 1);
 
-ORIGINAL QUESTION: "${initial_question}"
+  const prompt = `You are an expert evaluator for philosophical exploration. Rate this answer strictly on each dimension (1-10):
 
-${!isFirstStep ? `PREVIOUS INSIGHT (Step ${step_number - 1}): "${previous_answer}"` : ''}
+SCORING CRITERIA:
+- Novelty (1-10): Does this introduce genuinely new perspectives or insights?
+- Depth (1-10): How thoroughly and substantively does it explore the concept?
+- Coherence (1-10): Does it logically build on previous steps without contradiction?
+- Incremental Build (1-10): How well does it add meaningful value beyond previous steps?
+- Relevance (1-10): How directly does it address the core question?
+- Breakthrough (1-10): Potential for paradigm-shifting or transformative insight?
 
-CANDIDATE ANSWER (Step ${step_number}): "${candidate_answer}"
+QUALITY THRESHOLDS:
+- Novelty must be ≥ ${threshold_novelty}
+- Depth must be ≥ ${threshold_depth}
+- Breakthrough must be ≥ ${threshold_breakthrough}
 
-Evaluate this candidate answer on these EXACT criteria (score 1-10 for each):
+MANDATORY: Return ONLY valid JSON with numeric scores. No additional text.
 
-1. **NOVELTY** (1-10): Does this introduce genuinely new concepts, perspectives, or insights not covered before?
-   - 9-10: Introduces genuinely novel concepts or perspectives
-   - 7-8: Adds meaningful new elements with some originality
-   - 4-6: Some new elements but mostly familiar territory
-   - 1-3: Largely repetitive or rehashed content
-
-2. **DEPTH** (1-10): Does this reveal deeper mechanisms, principles, or layers of understanding?
-   - 9-10: Reveals profound underlying mechanisms or principles
-   - 7-8: Adds meaningful depth to understanding
-   - 4-6: Some depth but somewhat surface-level
-   - 1-3: Superficial or lacks meaningful depth
-
-3. **COHERENCE** (1-10): Does this logically connect to and build upon previous insights?
-   - 9-10: Seamlessly builds upon previous insights with clear logical progression
-   - 7-8: Good connection with minor gaps
-   - 4-6: Some connection but could be clearer
-   - 1-3: Poor connection or logical inconsistency
-
-4. **INCREMENTAL_BUILD** (1-10): Does this directly extend the previous step rather than going sideways?
-   - 9-10: Directly and meaningfully extends the previous insight
-   - 7-8: Clear extension with good progression
-   - 4-6: Some extension but could be more direct
-   - 1-3: Tangential or doesn't build on previous step
-
-5. **RELEVANCE** (1-10): Does this stay focused on the original question?
-   - 9-10: Highly relevant and advances understanding of the original question
-   - 7-8: Clearly relevant with good connection
-   - 4-6: Somewhat relevant but could be more focused
-   - 1-3: Tangential or off-topic
-
-6. **BREAKTHROUGH_POTENTIAL** (1-10): Does this have the potential to fundamentally shift understanding?
-   - 9-10: Revolutionary insight that could change how we think about the topic
-   - 7-8: Significant breakthrough potential with novel implications
-   - 4-6: Some innovative elements but incremental
-   - 1-3: Conventional thinking with minimal breakthrough potential
-
-DYNAMIC PASSING CRITERIA (adjusted based on cognitive pressure level ${pressure_config.cognitive_intensity.toFixed(1)}):
-- Novelty: Must be ≥ ${Math.round(7 + pressure_config.novelty_pressure * 2)}
-- Depth: Must be ≥ ${Math.round(6 + pressure_config.depth_pressure * 2)}  
-- Coherence: Must be ≥ 8
-- Incremental Build: Must be ≥ 7 (N/A for first step)
-- Relevance: Must be ≥ 7
-- Breakthrough Potential: Must be ≥ ${pressure_config.breakthrough_threshold}
-
-Respond with valid JSON in this exact format:
 {
-  "novelty": <score>,
-  "depth": <score>,
-  "coherence": <score>,
-  "incremental_build": <score>,
-  "relevance": <score>,
-  "breakthrough_potential": <score>,
-  "cognitive_pressure_applied": ${pressure_config.cognitive_intensity},
-  "overall_pass": <true/false>,
-  "explanation": "<brief explanation of the decision>"
-}`;
+  "novelty": [1-10],
+  "depth": [1-10], 
+  "coherence": [1-10],
+  "incremental_build": [1-10],
+  "relevance": [1-10],
+  "breakthrough_potential": [1-10],
+  "overall_pass": [true/false],
+  "explanation": "One sentence explanation of the rating"
+}
+
+Question: "${initial_question}"
+Previous Answer: ${previous_answer || 'This is the first step'}
+Candidate Answer: ${candidate_answer}
+
+Rate the candidate answer:`;
 
   const response = await callAI(prompt, 0.1); // Low temperature for consistency
   
   console.log('Raw judge response (first 300 chars):', response.substring(0, 300));
   
   try {
-    // Clean the response - handle different response formats
-    let cleanResponse = response.trim();
+    console.log('Raw judge response (first 300 chars):', response.substring(0, 300));
     
-    // Remove markdown code blocks if present
-    if (cleanResponse.includes('```json')) {
-      const start = cleanResponse.indexOf('```json') + 7;
-      const end = cleanResponse.lastIndexOf('```');
-      if (end > start) {
-        cleanResponse = cleanResponse.substring(start, end).trim();
-      }
-    } else if (cleanResponse.includes('```')) {
-      const start = cleanResponse.indexOf('```') + 3;
-      const end = cleanResponse.lastIndexOf('```');
-      if (end > start) {
-        cleanResponse = cleanResponse.substring(start, end).trim();
-      }
+    // Clean response - remove any markdown or extra text
+    let cleanedResponse = response.trim();
+    const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      cleanedResponse = jsonMatch[0];
     }
+    console.log('Cleaned response:', cleanedResponse);
     
-    // Find JSON object boundaries
-    const jsonStart = cleanResponse.indexOf('{');
-    const jsonEnd = cleanResponse.lastIndexOf('}');
-    if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
-      cleanResponse = cleanResponse.substring(jsonStart, jsonEnd + 1);
+    const judgeResult = JSON.parse(cleanedResponse);
+    
+    // Validate and sanitize all numeric fields
+    const scores: JudgeScores = {
+      novelty: Math.max(Math.min(Number(judgeResult.novelty) || 6, 10), 1),
+      depth: Math.max(Math.min(Number(judgeResult.depth) || 6, 10), 1),
+      coherence: Math.max(Math.min(Number(judgeResult.coherence) || 6, 10), 1),
+      incremental_build: Math.max(Math.min(Number(judgeResult.incremental_build) || 6, 10), 1),
+      relevance: Math.max(Math.min(Number(judgeResult.relevance) || 6, 10), 1),
+      breakthrough_potential: Math.max(Math.min(Number(judgeResult.breakthrough_potential) || 6, 10), 1),
+      cognitive_pressure_applied: pressure_applied,
+      overall_pass: Boolean(judgeResult.overall_pass),
+      explanation: String(judgeResult.explanation || 'Judge evaluation completed')
+    };
+
+    // Add global novelty if provided
+    if (global_novelty_score !== undefined) {
+      scores.global_novelty = global_novelty_score;
     }
-    
-    console.log('Cleaned response:', cleanResponse);
-    
-    const scores = JSON.parse(cleanResponse) as JudgeScores;
-    
-    // Much more lenient thresholds to fix the stalling issue
-    const noveltyMin = Math.max(4, Math.round(6 - pressure_config.novelty_pressure * 4));
-    const depthMin = Math.max(3, Math.round(5 - pressure_config.depth_pressure * 4));
-    const breakthroughMin = Math.max(3, pressure_config.breakthrough_threshold - 3);
-    
-    console.log(`Judge thresholds: novelty>=${noveltyMin}, depth>=${depthMin}, breakthrough>=${breakthroughMin}, pressure=${pressure_config.cognitive_intensity}`);
-    console.log(`Scores: novelty=${scores.novelty}, depth=${scores.depth}, breakthrough=${scores.breakthrough_potential}`);
-    
-    if (isFirstStep) {
-      scores.overall_pass = scores.novelty >= noveltyMin && 
-                           scores.depth >= depthMin && 
-                           scores.coherence >= 4 && 
-                           scores.relevance >= 4 &&
-                           (scores.breakthrough_potential || 0) >= breakthroughMin;
-    } else {
-      scores.overall_pass = scores.novelty >= noveltyMin && 
-                           scores.depth >= depthMin && 
-                           scores.coherence >= 4 && 
-                           scores.incremental_build >= 4 && 
-                           scores.relevance >= 4 &&
-                           (scores.breakthrough_potential || 0) >= breakthroughMin;
-    }
-    
-    console.log(`Judge decision: ${scores.overall_pass ? 'PASS' : 'FAIL'}`);
-    
+
+    console.log('Scores:', `novelty=${scores.novelty}, depth=${scores.depth}, breakthrough=${scores.breakthrough_potential}`);
+    console.log('Judge decision:', scores.overall_pass ? 'PASS' : 'FAIL');
+    console.log('Judge thresholds:', `novelty>=${threshold_novelty}, depth>=${threshold_depth}, breakthrough>=${threshold_breakthrough}, pressure=${pressure_applied}`);
+
     return scores;
   } catch (error) {
     console.error('Judge parsing failed. Error:', error.message);
