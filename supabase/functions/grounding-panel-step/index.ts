@@ -298,12 +298,38 @@ ${userComments.map(comment =>
 
 IMPORTANT: The user has provided specific guidance above. Consider their insights and directions carefully as you develop your grounding perspective. Their guidance represents valuable human perspective that should influence how you make concepts practical and concrete.` : ''}
 
-${researchMode ? `RESEARCH MODE ENHANCED: In addition to your grounding role, you must now:
-- Cite at least 2 specific studies, frameworks, or documented examples
-- Provide evidence-based reasoning for all claims
-- Include practical implementation timelines and resource estimates
-- Explain concepts in accessible language (avoid jargon)
-- Flag any speculation with clear disclaimers` : ''}
+${researchMode ? `RUTHLESS RESEARCH MODE ENFORCEMENT - GROUNDING AGENTS UNDER EXTREME SCRUTINY:
+
+1. EVIDENCE REQUIREMENTS (MANDATORY - NO EXCEPTIONS):
+   - MUST cite minimum 3 peer-reviewed studies with publication years
+   - MUST provide author names, journal names, and sample sizes
+   - MUST include government reports, industry standards, or documented case studies
+   - FAILURE TO MEET CITATION MINIMUM = AUTOMATIC REJECTION
+
+2. GROUNDING VERIFICATION (ENFORCED):
+   - MUST transform abstract concepts into measurable, concrete examples
+   - MUST provide step-by-step implementation protocols
+   - MUST include cost estimates and resource requirements
+   - MUST explain "how to test this in the real world"
+
+3. ACCESSIBILITY MANDATES (ZERO TOLERANCE FOR JARGON):
+   - Maximum 10% technical terms without immediate definition
+   - MUST use analogies from everyday experience (cooking, sports, driving)
+   - MUST structure responses with clear headers and numbered steps
+   - MUST pass the "12-year-old test" for comprehension
+
+4. SPECULATION KILL-SWITCHES (AUTOMATED DETECTION):
+   - Maximum 15% speculative content allowed
+   - MUST prefix any speculation with "UNVERIFIED SPECULATION:"
+   - Abstract frameworks without practical validation = AUTO-PURGE
+   - Theoretical models without real-world testing = IMMEDIATE REJECTION
+
+5. ETHICAL SAFEGUARDS (CONTINUOUS MONITORING):
+   - Content scanned for bias, harm potential, accessibility discrimination
+   - Risk threshold >0.7 triggers KILL-SWITCH and forced regeneration
+   - MUST consider impact on vulnerable populations and economic equity
+
+Your grounding expertise is now under RUTHLESS ENFORCEMENT. Non-compliance triggers immediate rejection and regeneration with enhanced constraints.` : ''}
 
 From your specific grounding perspective as ${agent.name}, provide a practical, concrete response that:
 
@@ -349,9 +375,11 @@ From your perspective as ${agent.name}, critique these proposals focusing on:
 3. What real-world examples or evidence is missing?
 4. How could the practical applications be strengthened?
 5. What would make these ideas more accessible and actionable?
-${researchMode ? `6. What specific citations or evidence would strengthen claims?
-7. Where are implementation timelines or resource estimates needed?
-8. Which concepts need simpler, jargon-free explanations?` : ''}
+${researchMode ? `6. CITATION AUDIT (MANDATORY): Identify every unsupported claim requiring peer-reviewed evidence
+7. IMPLEMENTATION GAPS (ZERO TOLERANCE): Demand specific timelines, budgets, and resource estimates
+8. JARGON DETECTION (AUTOMATED): Flag technical terms exceeding 10% density without definitions
+9. SPECULATION PURGE (IMMEDIATE): Identify abstract concepts lacking practical validation
+10. ETHICAL RISK SCAN (CONTINUOUS): Assess bias, harm potential, and accessibility barriers` : ''}
 
 Your critique should push for greater practicality, clearer examples, and stronger real-world connections.
 ${researchMode ? 'Especially focus on evidence quality and research rigor.' : ''}
@@ -398,9 +426,11 @@ SYNTHESIS MISSION: Create a comprehensive, grounded response that:
 3. **Offers Actionable Steps**: Give clear, implementable guidance
 4. **Uses Accessible Language**: Explain complex ideas in simple, understandable terms
 5. **Includes Supporting Evidence**: Reference real examples, studies, or proven practices where relevant
-${researchMode ? `6. **Research Rigor**: Cite specific studies, frameworks, and documented evidence for all major claims
-7. **Implementation Details**: Provide concrete timelines, resource requirements, and measurable outcomes
-8. **Verification Methods**: Explain how claims can be tested or validated in practice` : ''}
+${researchMode ? `6. **RUTHLESS RESEARCH RIGOR**: MANDATORY citation of minimum 3 peer-reviewed studies with publication years and author names
+7. **ENFORCED IMPLEMENTATION DETAILS**: REQUIRED specific timelines (Month 1-12), budget estimates ($X), personnel needs (Y FTEs)
+8. **MANDATORY VERIFICATION METHODS**: MUST explain step-by-step how every major claim can be tested and validated
+9. **AUTO-PURGE SPECULATION**: Maximum 15% speculative content - excess triggers immediate regeneration
+10. **ETHICAL KILL-SWITCH**: Risk assessment >0.7 threshold activates automatic rejection and regeneration` : ''}
 
 Your synthesized answer should be practical, clear, and immediately useful. Focus on grounding rather than further exploration.
 ${researchMode ? 'Emphasize evidence-based reasoning and research quality throughout.' : ''}

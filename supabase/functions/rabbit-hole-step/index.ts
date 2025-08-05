@@ -417,9 +417,9 @@ async function generateFirstAnswer(initial_question: string, domain: string, pre
     ? `\n\nCOGNITIVE PRESSURE APPLIED: You are expected to operate at the highest level of intellectual rigor. This exploration will be judged against the quality of existing insights in the knowledge base. Your response must be genuinely novel and profound.`
     : '';
 
-  // Add devil's advocate mode instructions
+  // Add devil's advocate mode instructions with RUTHLESS RESEARCH ENFORCEMENT
   const devilsAdvocateInstructions = generation_mode === 'devils_advocate' 
-    ? `\n\nDEVIL'S ADVOCATE MODE: Your role is to be intellectually skeptical. Challenge conventional assumptions, point out potential flaws in reasoning, propose mundane explanations for apparent insights, and demand rigorous evidence. Question the very foundation of the exploration itself.`
+    ? `\n\nDEVIL'S ADVOCATE MODE WITH RUTHLESS RESEARCH ENFORCEMENT: Your role is to be intellectually skeptical AND enforce evidence standards. Challenge conventional assumptions, point out potential flaws in reasoning, propose mundane explanations for apparent insights, and demand rigorous evidence. Question the very foundation of the exploration itself. ADDITIONALLY: REJECT any claim lacking peer-reviewed evidence, PURGE speculation exceeding 20%, DEMAND concrete implementation steps, and ACTIVATE ethical kill-switches for harmful content.`
     : '';
 
   // Context-aware intellectual mode instructions

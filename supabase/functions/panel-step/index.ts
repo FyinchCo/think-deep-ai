@@ -236,16 +236,41 @@ async function generatePanelDebate(question: string, domain: string, previousCon
 
 async function generateAgentProposal(agent: Agent, question: string, domain: string, previousContext: string, stepNumber: number, userComments: any[] = [], researchMode: boolean = false) {
   
-  const researchModePrompt = researchMode ? `
+  // RUTHLESS RESEARCH MODE ENFORCEMENT
+  const ruthlessResearchPrompt = researchMode ? `
 
-RESEARCH MODE ACTIVE: Your response must include:
-1. EVIDENCE REQUIREMENTS: Cite at least 2-3 real studies, documented cases, or empirical examples to support your claims
-2. PRACTICAL IMPLEMENTATION: Provide concrete, actionable steps with timelines or cost estimates where relevant  
-3. CITATION CHECKING: Reference specific frameworks, methodologies, or established practices
-4. AVOID SPECULATION: Flag when moving beyond documented evidence with phrases like "Based on evidence..." or "Research suggests..."
-5. ACCESSIBILITY: Explain complex concepts in simple terms that a general audience can understand
+RUTHLESS RESEARCH MODE ACTIVATED - MANDATORY COMPLIANCE:
 
-Your role as ${agent.name} now emphasizes research rigor and evidence-based reasoning while maintaining your core personality.` : '';
+1. EVIDENCE REQUIREMENTS (MANDATORY):
+   - MUST cite at least 3 specific studies, peer-reviewed papers, or documented cases
+   - MUST provide exact publication years and author names
+   - MUST distinguish between speculation and evidence with clear markers
+   - FAILURE TO PROVIDE CITATIONS = AUTOMATIC REJECTION
+
+2. SPECULATION LIMITERS (ENFORCED):
+   - Maximum 20% speculative content allowed
+   - MUST flag speculation with "SPECULATIVE:" prefix
+   - Avoid jargon density above 15% without definitions
+   - Replace vague terms with concrete, measurable descriptions
+
+3. PRACTICAL IMPLEMENTATION (REQUIRED):
+   - MUST provide specific timelines (e.g., "Month 1-3: X, Month 4-6: Y")
+   - MUST include resource estimates (budget, personnel, time)
+   - MUST explain implementation steps a general audience can follow
+   - Abstract concepts MUST include real-world analogies
+
+4. ETHICAL KILL-SWITCHES (MONITORED):
+   - Content will be scanned for bias, harm potential, and ethical violations
+   - Risk threshold: >0.7 triggers automatic rejection and regeneration
+   - MUST consider societal impact and vulnerable populations
+
+5. ACCESSIBILITY REQUIREMENTS (ENFORCED):
+   - Explain technical terms immediately when first used
+   - Use analogies from everyday experience
+   - Structure responses with clear headers and bullet points
+   - Test understanding with simple examples
+
+Your role as ${agent.name} now operates under RUTHLESS RESEARCH ENFORCEMENT. Non-compliance results in automatic rejection and regeneration.` : '';
 
   const prompt = `You are ${agent.name}, the ${agent.role} in a philosophical inquiry council.
 
@@ -282,14 +307,42 @@ Your response should be 2-3 paragraphs maximum.`;
 async function generateAgentCritique(agent: Agent, proposals: string[], agentIndex: number, question: string, domain: string, researchMode: boolean = false) {
   const otherProposals = proposals.filter((_, index) => index !== agentIndex);
   
-  const researchCritique = researchMode ? `
+  // RUTHLESS RESEARCH CRITIQUE ENFORCEMENT
+  const ruthlessResearchCritique = researchMode ? `
 
-RESEARCH MODE CRITIQUE FOCUS:
-- Challenge claims that lack evidence or proper citations
-- Identify where practical implementation details are missing
-- Point out areas where jargon or complexity could be simplified
-- Request specific studies or examples to support abstract concepts
-- Suggest concrete ways to test or validate the proposed ideas` : '';
+RUTHLESS RESEARCH CRITIQUE PROTOCOL - MANDATORY ENFORCEMENT:
+
+1. EVIDENCE AUDIT (REQUIRED):
+   - IDENTIFY every claim lacking citations or evidence
+   - DEMAND specific study names, publication years, and sample sizes
+   - FLAG speculative content exceeding 20% threshold
+   - REJECT proposals with insufficient empirical backing
+
+2. SPECULATION DETECTION (AUTOMATED):
+   - SCAN for jargon density above 15% without definitions
+   - IDENTIFY abstract concepts without real-world examples
+   - MARK theoretical frameworks without practical validation
+   - PURGE content that cannot be implemented or tested
+
+3. PRACTICAL IMPLEMENTATION VERIFICATION:
+   - DEMAND specific timelines and resource estimates
+   - REQUIRE step-by-step implementation guides
+   - REQUEST measurable outcomes and success metrics
+   - CHALLENGE proposals lacking actionable components
+
+4. ETHICAL RISK ASSESSMENT:
+   - SCAN for potential bias, harm, or discrimination
+   - EVALUATE impact on vulnerable populations
+   - ASSESS societal implications and unintended consequences
+   - TRIGGER KILL-SWITCH for ethical violations >0.7 risk threshold
+
+5. ACCESSIBILITY ENFORCEMENT:
+   - IDENTIFY technical terms requiring definition
+   - REQUEST simpler analogies for complex concepts
+   - DEMAND restructuring of dense, inaccessible content
+   - REQUIRE 12-year-old comprehension level explanations
+
+Your critique must be RUTHLESSLY focused on research quality. Proposals failing these standards will be AUTO-PURGED and regenerated.` : '';
   
   const prompt = `You are ${agent.name}, the ${agent.role}.
 
@@ -308,15 +361,53 @@ Keep your critique to 1-2 paragraphs.`;
 
 async function generatePanelSynthesis(question: string, domain: string, proposals: string[], critiques: string[], previousContext: string, stepNumber: number, researchMode: boolean = false) {
   
-  const researchSynthesis = researchMode ? `
+  // RUTHLESS RESEARCH SYNTHESIS ENFORCEMENT
+  const ruthlessResearchSynthesis = researchMode ? `
 
-RESEARCH MODE SYNTHESIS REQUIREMENTS:
-- Include a "EVIDENCE BASE" section citing all studies, frameworks, and documented examples mentioned
-- Add a "PRACTICAL IMPLEMENTATION" section with concrete steps, timelines, and resource requirements
-- Include a "VERIFICATION METHODS" section explaining how claims could be tested or validated
-- Ensure all claims are either evidence-backed or clearly marked as speculation
-- Translate any jargon into accessible language
-- Add PRACTICALITY and EVIDENCE scores alongside traditional metrics` : '';
+RUTHLESS RESEARCH SYNTHESIS PROTOCOL - MANDATORY COMPLIANCE:
+
+1. EVIDENCE BASE VERIFICATION (REQUIRED):
+   - MUST include "EVIDENCE BASE" section with complete citations
+   - MUST verify at least 75% of claims with documented sources
+   - MUST distinguish evidence from speculation with clear markers
+   - AUTO-REJECT if evidence quality score below 7/10
+
+2. PRACTICAL IMPLEMENTATION MANDATE:
+   - MUST include "PRACTICAL IMPLEMENTATION" section
+   - MUST provide specific timelines (months/quarters with deliverables)
+   - MUST estimate resource requirements (budget $X, personnel Y)
+   - MUST define measurable success criteria and KPIs
+
+3. VERIFICATION METHODS (MANDATORY):
+   - MUST include "VERIFICATION METHODS" section
+   - MUST explain how each major claim can be tested
+   - MUST provide step-by-step validation protocols
+   - MUST identify potential falsification criteria
+
+4. SPECULATION LIMITERS (ENFORCED):
+   - Maximum 15% speculative content in final synthesis
+   - MUST prefix speculation with clear warnings
+   - MUST replace abstract jargon with concrete examples
+   - AUTO-PURGE synthesis exceeding speculation threshold
+
+5. ETHICAL SAFEGUARDS (MONITORED):
+   - MUST assess potential bias and harm risks
+   - MUST consider impact on vulnerable populations
+   - MUST include ethical considerations in implementation
+   - KILL-SWITCH activated for ethical violations >0.7 threshold
+
+6. ACCESSIBILITY REQUIREMENTS (ENFORCED):
+   - MUST explain all technical terms immediately
+   - MUST use analogies from everyday experience
+   - MUST structure with clear headers and bullet points
+   - MUST achieve 12-year-old comprehension level
+
+7. ENHANCED SCORING METRICS:
+   - Traditional scores: Novelty, Depth, Coherence, Relevance
+   - MANDATORY additional scores: Practicality, Evidence, Research_Rigor, Accessibility, Ethics
+   - Minimum threshold: 7/10 across all categories for acceptance
+
+FAILURE TO MEET THESE STANDARDS TRIGGERS AUTOMATIC REGENERATION WITH ENHANCED CONSTRAINTS.` : '';
 
   const prompt = `You are synthesizing a multi-agent panel debate for step ${stepNumber} of exploring: "${question}"
 
