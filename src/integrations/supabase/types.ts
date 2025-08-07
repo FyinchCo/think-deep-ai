@@ -261,6 +261,7 @@ export type Database = {
           scope: string | null
           trigger_condition: string | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -276,6 +277,7 @@ export type Database = {
           scope?: string | null
           trigger_condition?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -291,6 +293,7 @@ export type Database = {
           scope?: string | null
           trigger_condition?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -342,6 +345,30 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       question_architecture: {
         Row: {
           analyzed_at: string
@@ -387,6 +414,7 @@ export type Database = {
           last_updated_at: string
           status: string
           total_steps: number
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -396,6 +424,7 @@ export type Database = {
           last_updated_at?: string
           status?: string
           total_steps?: number
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -405,6 +434,7 @@ export type Database = {
           last_updated_at?: string
           status?: string
           total_steps?: number
+          user_id?: string | null
         }
         Relationships: []
       }
