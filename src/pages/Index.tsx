@@ -2,10 +2,16 @@
 
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, LogOut, User } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 const Index = () => {
   const navigate = useNavigate();
+  const { user, loading, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/50 to-background relative overflow-hidden">
@@ -35,18 +41,50 @@ const Index = () => {
         </p>
         
         <div className="space-y-4">
-          <Button
-            onClick={() => navigate('/cognitive-lab')}
-            className="bg-gradient-to-r from-axiom to-axiom-accent hover:from-axiom-accent hover:to-primary shadow-[var(--shadow-crimson)] text-lg px-8 py-6 border border-axiom/30"
-            size="lg"
-          >
-            Enter the Laboratory
-            <ArrowRight className="h-5 w-5 ml-2" />
-          </Button>
-          
-          <p className="text-sm text-muted-foreground/80">
-            Experimental protocol for reality dissolution
-          </p>
+          {user ? (
+            <>
+              <div className="flex items-center gap-4 justify-center mb-6">
+                <div className="flex items-center gap-2 text-axiom-accent">
+                  <User className="h-4 w-4" />
+                  <span className="text-sm">Authenticated</span>
+                </div>
+                <Button
+                  onClick={handleSignOut}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                >
+                  <LogOut className="h-3 w-3 mr-1" />
+                  Sign Out
+                </Button>
+              </div>
+              <Button
+                onClick={() => navigate('/cognitive-lab')}
+                className="bg-gradient-to-r from-axiom to-axiom-accent hover:from-axiom-accent hover:to-primary shadow-[var(--shadow-crimson)] text-lg px-8 py-6 border border-axiom/30"
+                size="lg"
+                disabled={loading}
+              >
+                Enter the Laboratory
+                <ArrowRight className="h-5 w-5 ml-2" />
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                onClick={() => navigate('/auth')}
+                className="bg-gradient-to-r from-axiom to-axiom-accent hover:from-axiom-accent hover:to-primary shadow-[var(--shadow-crimson)] text-lg px-8 py-6 border border-axiom/30"
+                size="lg"
+                disabled={loading}
+              >
+                {loading ? 'Loading...' : 'Authenticate Access'}
+                <ArrowRight className="h-5 w-5 ml-2" />
+              </Button>
+              
+              <p className="text-sm text-muted-foreground/80">
+                Authentication required for reality dissolution protocols
+              </p>
+            </>
+          )}
         </div>
       </div>
     </div>

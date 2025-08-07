@@ -1,19 +1,22 @@
 project_id = "oypsdwgvjwycgjxfqndi"
 
 [functions.rabbit-hole-step]
-verify_jwt = false
+verify_jwt = true
 
 [functions.panel-step]
-verify_jwt = false
+verify_jwt = true
 
 [functions.grounding-panel-step]
-verify_jwt = false
+verify_jwt = true
 
 [functions.backfill-embeddings]
 verify_jwt = false
 
 [functions.brilliance-compression-engine]
-verify_jwt = false
+verify_jwt = true
 
 [functions.atom-status-engine]
-verify_jwt = false
+verify_jwt = true
+
+[functions.optimized-prompts]
+verify_jwt = true

@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { CollapsibleStep } from '@/components/cognitive-lab/CollapsibleStep';
 import { ExportTools } from '@/components/cognitive-lab/ExportTools';
 import { AutoRunControls } from '@/components/cognitive-lab/AutoRunControls';
@@ -192,11 +193,22 @@ const CognitiveLab = () => {
     }
   };
 
+  const { user } = useAuth();
+
   const startRabbitHole = async () => {
     if (!question.trim()) {
       toast({
         title: 'Error',
         description: 'Please enter a question to explore',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!user) {
+      toast({
+        title: 'Authentication Required',
+        description: 'Please log in to start an exploration',
         variant: 'destructive',
       });
       return;
@@ -210,7 +222,8 @@ const CognitiveLab = () => {
         .insert({
           initial_question: question,
           domain: 'philosophy',
-          status: 'active'
+          status: 'active',
+          user_id: user.id
         })
         .select()
         .single();

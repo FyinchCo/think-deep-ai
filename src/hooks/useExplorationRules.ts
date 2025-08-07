@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Rule {
   id: string;
@@ -17,6 +18,7 @@ interface Rule {
 export const useExplorationRules = (rabbitHoleId: string, currentStep: number) => {
   const [rules, setRules] = useState<Rule[]>([]);
   const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
 
   const fetchRules = useCallback(async () => {
     if (!rabbitHoleId) return;
@@ -91,16 +93,31 @@ export const useExplorationRules = (rabbitHoleId: string, currentStep: number) =
   }, [currentStep]);
 
   const evaluateTriggerCondition = (condition: string, step: number): boolean => {
-    // Simple trigger condition evaluation
-    // Examples: "step > 10", "step % 5 == 0", "step >= 20"
+    // Safe trigger condition evaluation without dynamic code execution
+    // Only supports specific predefined patterns
     try {
-      // Replace 'step' with actual step number and evaluate
-      const evalCondition = condition.replace(/step/g, step.toString());
-      // For security, only allow specific patterns
-      if (!/^[\d\s+\-*/%()><!=&|]+$/.test(evalCondition)) {
-        return true; // If condition is complex, default to active
+      // Sanitize and validate condition string
+      const sanitized = condition.trim().toLowerCase();
+      
+      // Predefined safe conditions
+      const patterns = [
+        { pattern: /^step\s*>\s*(\d+)$/, eval: (match: RegExpMatchArray) => step > parseInt(match[1]) },
+        { pattern: /^step\s*>=\s*(\d+)$/, eval: (match: RegExpMatchArray) => step >= parseInt(match[1]) },
+        { pattern: /^step\s*<\s*(\d+)$/, eval: (match: RegExpMatchArray) => step < parseInt(match[1]) },
+        { pattern: /^step\s*<=\s*(\d+)$/, eval: (match: RegExpMatchArray) => step <= parseInt(match[1]) },
+        { pattern: /^step\s*==\s*(\d+)$/, eval: (match: RegExpMatchArray) => step === parseInt(match[1]) },
+        { pattern: /^step\s*%\s*(\d+)\s*==\s*(\d+)$/, eval: (match: RegExpMatchArray) => step % parseInt(match[1]) === parseInt(match[2]) },
+      ];
+      
+      for (const { pattern, eval: evalFn } of patterns) {
+        const match = sanitized.match(pattern);
+        if (match) {
+          return evalFn(match);
+        }
       }
-      return Function(`"use strict"; return (${evalCondition})`)();
+      
+      // If no pattern matches, default to active for safety
+      return true;
     } catch {
       return true; // If evaluation fails, default to active
     }
