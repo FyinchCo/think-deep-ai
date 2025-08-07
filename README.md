@@ -1,6 +1,15 @@
 # The Axiom Project 🪓
 
-An AI-powered cognitive exploration system that generates deep philosophical insights through iterative "rabbit hole" explorations. The system uses multiple AI models, quality assessment, and breakthrough detection to push the boundaries of AI-generated philosophical content.
+> **Advanced AI-Powered Cognitive Exploration System**  
+> A sophisticated philosophical reasoning platform utilizing multi-model AI orchestration, vector embeddings, dynamic cognitive pressure algorithms, and enterprise-grade security architecture.
+
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
+[![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white)](https://openai.com/)
+
+An enterprise-grade cognitive exploration system that orchestrates multiple AI models to generate breakthrough philosophical insights through iterative "rabbit hole" explorations. Features advanced quality assessment, breakthrough detection algorithms, and comprehensive security architecture.
 
 ## ✨ Features
 
@@ -69,27 +78,96 @@ npm run dev
 2. Go to `/cognitive-lab` to start your first exploration
 3. Enter a thought-provoking question and select your exploration mode
 
-## 🏗️ Architecture
+## 🏗️ Technical Architecture
+
+### System Overview
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   React Client  │───▶│  Supabase Edge   │───▶│  AI Providers   │
+│   (TypeScript)  │    │   Functions      │    │ (OpenAI/Grok)   │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   Auth System   │    │   PostgreSQL     │    │   Vector Store  │
+│ (Row Level Sec) │    │   Database       │    │  (Embeddings)   │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+```
+
+### Core Components
+
+#### **1. Multi-Agent AI Orchestration Engine**
+- **Exploration Mode**: 3-agent system (Builder/Critic/Synthesizer) for dialectical reasoning
+- **Quality Assessment**: Dedicated AI judge with 7-dimension scoring algorithm
+- **Cognitive Pressure System**: Dynamic prompt engineering based on quality momentum
+- **Model Fallback Chain**: Grok → OpenAI → Gemini with graceful degradation
+
+#### **2. Advanced Analytics & Detection Systems**
+- **Brilliance Detection Algorithm**: Linguistic pattern analysis for insight quality
+- **Breakthrough Detection**: Paradigm shift identification using conceptual mapping
+- **Coherence Monitoring**: Real-time tracking of conceptual saturation and drift
+- **Vector Similarity Engine**: Novel insight detection using OpenAI embeddings
+
+#### **3. Security Architecture**
+- **Zero-Trust Data Model**: Complete user isolation via Row-Level Security
+- **JWT Authentication**: Supabase Auth with protected API endpoints
+- **Safe Code Execution**: Eliminated dynamic code evaluation vulnerabilities
+- **Secret Management**: Secure API key storage via Supabase Vault
 
 ### Database Schema
 - **rabbit_holes**: Exploration sessions with user isolation
-- **answers**: Generated insights with quality metrics
-- **exploration_rules**: Customizable exploration constraints
-- **breakthrough_modes**: Adaptive AI behavior patterns
-- **answer_embeddings**: Vector similarity for novelty detection
+- **answers**: Generated insights with quality metrics and vector embeddings
+- **exploration_rules**: Customizable AI behavior constraints
+- **breakthrough_modes**: Adaptive cognitive pressure parameters
+- **paradigm_shifts**: Detected breakthrough moments with metadata
+- **question_architecture**: Structural analysis of exploration potential
 
-### AI Model Integration
-- **Primary**: Grok (X.AI) for creative insights
-- **Fallback**: OpenAI GPT-4 for consistency
-- **Secondary**: Google Gemini for diverse perspectives
-- **Judge**: Dedicated quality assessment AI
+### AI Model Integration & Algorithms
 
-### Edge Functions
-- `rabbit-hole-step`: Core exploration logic
-- `panel-step`: Multi-agent exploration mode
-- `grounding-panel-step`: Reality-anchored exploration
-- `brilliance-compression-engine`: Insight quality analysis
-- `breakthrough-engine`: Paradigm shift detection
+#### **Primary AI Models**
+- **Grok (X.AI)**: Primary generation engine for creative philosophical insights
+- **OpenAI GPT-4**: Fallback model for consistency and reliability  
+- **Google Gemini**: Secondary perspective generation for diversity
+- **Anthropic Claude**: Quality assessment and ethical reasoning
+
+#### **Custom Algorithms**
+1. **Cognitive Pressure Calculation**
+   ```typescript
+   pressure = baseComplexity + (stepNumber * escalationRate) + 
+             qualityMomentum + domainSpecificModifiers
+   ```
+
+2. **Brilliance Score Computation**
+   - Philosophical term density analysis
+   - Conceptual novelty measurement
+   - Linguistic complexity scoring
+   - Insight depth evaluation
+
+3. **Breakthrough Detection Matrix**
+   - Temporal displacement indicators
+   - Assumption inversion patterns
+   - Meta-cognitive framing detection
+   - Constraint paradox identification
+
+### Edge Functions Architecture
+```typescript
+// Core exploration logic with retry mechanisms
+rabbit-hole-step/          // Primary exploration engine
+├── pressure-calculation   // Dynamic cognitive pressure
+├── novelty-detection     // Vector similarity checking  
+├── quality-assessment    // Multi-dimensional scoring
+└── breakthrough-analysis // Paradigm shift detection
+
+panel-step/               // Multi-agent exploration
+├── agent-orchestration  // Builder/Critic/Synthesizer
+├── discourse-synthesis   // Dialectical reasoning
+└── consensus-building    // Insight convergence
+
+grounding-panel-step/     // Reality-anchored exploration
+├── fact-verification    // Research enforcement
+├── constraint-application // Reality boundaries
+└── evidence-integration  // Factual grounding
+```
 
 ## 🔒 Security Features
 
