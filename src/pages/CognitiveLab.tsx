@@ -30,6 +30,7 @@ import { useExplorationRules } from "@/hooks/useExplorationRules";
 import { ModeEffectivenessTracker } from "@/components/cognitive-lab/ModeEffectivenessTracker";
 import { useBreakthroughDetection } from "@/hooks/useBreakthroughDetection";
 import { BreakthroughControl } from "@/components/cognitive-lab/BreakthroughControl";
+import { HypothesisTable } from "@/components/cognitive-lab/HypothesisTable";
 
 interface Answer {
   id: string;
@@ -1020,7 +1021,7 @@ Total steps analyzed: ${answers.length}`;
             </Card>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="exploration" className="flex items-center gap-2">
                   <List className="h-4 w-4" />
                   Exploration
@@ -1032,6 +1033,10 @@ Total steps analyzed: ${answers.length}`;
                 <TabsTrigger value="analytics" className="flex items-center gap-2">
                   <BarChart3 className="h-4 w-4" />
                   Analytics
+                </TabsTrigger>
+                <TabsTrigger value="phase2" className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4" />
+                  Phase 2
                 </TabsTrigger>
                 <TabsTrigger value="autorun" className="flex items-center gap-2">
                   <Zap className="h-4 w-4" />
@@ -1217,6 +1222,14 @@ Total steps analyzed: ${answers.length}`;
                   currentStep={currentRabbitHole.total_steps}
                 />
                 <AnalyticsDashboard answers={answers} />
+              </TabsContent>
+
+              <TabsContent value="phase2" className="space-y-4">
+                <HypothesisTable
+                  rabbitHole={currentRabbitHole}
+                  answers={answers}
+                  onRunGrounding={generateGroundingStep}
+                />
               </TabsContent>
 
               <TabsContent value="autorun">
