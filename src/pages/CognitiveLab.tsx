@@ -1229,6 +1229,8 @@ Total steps analyzed: ${answers.length}`;
                   rabbitHole={currentRabbitHole}
                   answers={answers}
                   onRunGrounding={generateGroundingStep}
+                  researchMode={researchMode}
+                  onToggleResearch={setResearchMode}
                 />
               </TabsContent>
 

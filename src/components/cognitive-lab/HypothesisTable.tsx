@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Sparkles, CheckCircle, ThumbsUp, ThumbsDown, Send } from 'lucide-react';
@@ -43,9 +44,11 @@ interface HypothesisTableProps {
   rabbitHole: RabbitHole;
   answers: Answer[];
   onRunGrounding: () => Promise<void>;
+  researchMode: boolean;
+  onToggleResearch: (v: boolean) => void;
 }
 
-export const HypothesisTable: React.FC<HypothesisTableProps> = ({ rabbitHole, answers, onRunGrounding }) => {
+export const HypothesisTable: React.FC<HypothesisTableProps> = ({ rabbitHole, answers, onRunGrounding, researchMode, onToggleResearch }) => {
   const { toast } = useToast();
   const [hypotheses, setHypotheses] = useState<Hypothesis[]>([]);
   const [filter, setFilter] = useState<'all' | HypothesisMetric>('all');
@@ -168,6 +171,11 @@ export const HypothesisTable: React.FC<HypothesisTableProps> = ({ rabbitHole, an
             <Sparkles className="h-4 w-4 mr-2" />
             Generate Hypotheses
           </Button>
+
+          <div className="flex items-center gap-2 ml-2">
+            <span className="text-xs">Research-Grounded</span>
+            <Switch checked={researchMode} onCheckedChange={onToggleResearch} />
+          </div>
 
           <div className="ml-auto flex items-center gap-2">
             <Badge variant="outline">{rabbitHole.total_steps} steps</Badge>
