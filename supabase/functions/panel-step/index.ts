@@ -278,7 +278,7 @@ PERSONALITY: ${agent.personality}
 
 CONSTRAINTS:
 ${agent.constraints.map(c => `- ${c}`).join('\n')}
-${researchModePrompt}
+${ruthlessResearchPrompt}
 
 CONTEXT:
 Original Question: "${question}"
@@ -301,7 +301,7 @@ ${researchMode ? 'Remember to ground your response in evidence and provide concr
 
 Your response should be 2-3 paragraphs maximum.`;
 
-  return await callAI(prompt, 'gpt-4o-mini');
+  return await callAI(prompt, 'gpt-4o-mini', 0.8);
 }
 
 async function generateAgentCritique(agent: Agent, proposals: string[], agentIndex: number, question: string, domain: string, researchMode: boolean = false) {
@@ -351,12 +351,12 @@ Review these proposals from other council members:
 ${otherProposals.map((proposal, i) => `Proposal ${i + 1}:\n${proposal}`).join('\n\n')}
 
 As ${agent.name}, provide constructive critique and identify key tensions or synergies. What would you refine, challenge, or build upon? Stay true to your role as ${agent.role}.
-${researchCritique}
+${ruthlessResearchCritique}
 ${researchMode ? 'Focus especially on evidence quality and practical implementation.' : ''}
 
 Keep your critique to 1-2 paragraphs.`;
 
-  return await callAI(prompt, 'gpt-4o-mini');
+  return await callAI(prompt, 'gpt-4o-mini', 0.8);
 }
 
 async function generatePanelSynthesis(question: string, domain: string, proposals: string[], critiques: string[], previousContext: string, stepNumber: number, researchMode: boolean = false) {
@@ -419,7 +419,7 @@ ${critiques.map((critique, i) => `${agents[i].name}'s Critique:\n${critique}`).j
 
 PREVIOUS CONTEXT:
 ${previousContext}
-${researchSynthesis}
+${ruthlessResearchSynthesis}
 
 Synthesize this debate into a coherent advancement of the exploration. The output should:
 1. Integrate the strongest insights from all agents
@@ -459,7 +459,7 @@ Coherence: [1-10]
 Relevance: [1-10]
 ${researchMode ? 'Practicality: [1-10]\nEvidence: [1-10]' : ''}`;
 
-  const response = await callAI(prompt, 'gpt-4o-mini');
+  const response = await callAI(prompt, 'gpt-4o-mini', 0.8);
   
   // Parse the structured response
   const sections = response.split(/(?:SYNTHESIS:|AGENT CONTRIBUTIONS:|DEBATE SUMMARY:|SCORES:)/);
@@ -526,6 +526,7 @@ async function callOpenAI(prompt: string, model: string = 'gpt-4o-mini'): Promis
       model,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.8,
+      top_p: 1.0,
       max_tokens: 1000,
     }),
   });

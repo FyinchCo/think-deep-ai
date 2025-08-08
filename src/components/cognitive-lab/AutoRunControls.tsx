@@ -20,6 +20,8 @@ interface AutoRunControlsProps {
   generationMode: 'single' | 'exploration' | 'grounding' | 'cycling' | 'devils_advocate';
   onGenerationModeChange: (mode: 'single' | 'exploration' | 'grounding' | 'cycling' | 'devils_advocate') => void;
   researchMode: boolean;
+  earlyStopEnabled: boolean;
+  onEarlyStopChange: (v: boolean) => void;
 }
 
 export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
