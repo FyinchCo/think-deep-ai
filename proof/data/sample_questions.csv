@@ -1,0 +1,21 @@
+id,question,domain,complexity,expected_breakthrough
+1,"What if consciousness is not produced by the brain but rather filtered by it?",consciousness,high,true
+2,"How would ethics change if we discovered free will was an illusion?",ethics,high,true
+3,"What is the relationship between time and identity?",metaphysics,medium,false
+4,"Why do we value authenticity when everything is socially constructed?",philosophy,medium,false
+5,"What would happen if we could experience the universe from a photon's perspective?",physics,high,true
+6,"Is the question 'Why is there something rather than nothing?' even meaningful?",ontology,high,true
+7,"How does language limit our ability to think?",linguistics,medium,false
+8,"What if suffering is necessary for consciousness to exist?",consciousness,high,true
+9,"Can we ever truly understand anything outside of our human perspective?",epistemology,medium,false
+10,"What would morality look like in a universe where time flows backwards?",ethics,high,true
+11,"Is the concept of 'self' an evolutionary accident?",evolution,medium,false
+12,"How would civilization change if we could directly transfer memories?",technology,high,true
+13,"What if beauty is a fundamental property of reality like mass or charge?",aesthetics,medium,false
+14,"Why do we assume that intelligence requires consciousness?",intelligence,high,true
+15,"What would truth mean in a multiverse where all possibilities exist?",truth,high,true
+16,"How does the observer effect in quantum mechanics relate to consciousness?",physics,high,true
+17,"What if emotions are more fundamental than thoughts?",psychology,medium,false
+18,"Is there a meaningful difference between simulation and reality?",reality,high,true
+19,"How would mathematics change if discovered by aliens?",mathematics,medium,false
+20,"What if the universe is conscious and we are its thoughts?",cosmology,high,true
