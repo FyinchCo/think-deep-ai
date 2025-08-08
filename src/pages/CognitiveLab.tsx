@@ -67,6 +67,7 @@ const CognitiveLab = () => {
   const [brillianceModeActive, setBrillianceModeActive] = useState(false);
   const [isGeneratingBrilliance, setIsGeneratingBrilliance] = useState(false);
   const [rules, setRules] = useState([]);
+  const [earlyStopEnabled, setEarlyStopEnabled] = useState(true);
   const { toast } = useToast();
 
   // Rules integration
@@ -1039,6 +1040,8 @@ Total steps analyzed: ${answers.length}`;
                       generationMode={generationMode}
                       onGenerationModeChange={setGenerationMode}
                       researchMode={researchMode}
+                      earlyStopEnabled={earlyStopEnabled}
+                      onEarlyStopChange={setEarlyStopEnabled}
                     />
                   </CardContent>
                 </Card>
@@ -1208,6 +1211,8 @@ Total steps analyzed: ${answers.length}`;
                   generationMode={generationMode}
                   onGenerationModeChange={setGenerationMode}
                   researchMode={researchMode}
+                  earlyStopEnabled={earlyStopEnabled}
+                  onEarlyStopChange={setEarlyStopEnabled}
                 />
               </TabsContent>
             </Tabs>
