@@ -20,3 +20,6 @@ verify_jwt = true
 
 [functions.optimized-prompts]
 verify_jwt = true
+
+[functions.full-cycle-orchestrator]
+verify_jwt = false

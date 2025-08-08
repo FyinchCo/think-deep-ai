@@ -118,6 +118,98 @@ export type Database = {
           },
         ]
       }
+      automation_events: {
+        Row: {
+          at: string
+          id: number
+          level: string
+          message: string | null
+          run_id: string
+        }
+        Insert: {
+          at?: string
+          id?: number
+          level?: string
+          message?: string | null
+          run_id: string
+        }
+        Update: {
+          at?: string
+          id?: number
+          level?: string
+          message?: string | null
+          run_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_events_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "automation_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_runs: {
+        Row: {
+          created_at: string
+          id: string
+          last_run_at: string | null
+          next_run_at: string
+          p1_delay_sec: number
+          p1_early_stop: boolean
+          p1_steps_completed: number
+          p1_target_steps: number
+          p2_rounds: number
+          p2_rounds_completed: number
+          phase: string
+          rabbit_hole_id: string
+          research_mode_p1: boolean
+          research_mode_p2: boolean
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_run_at?: string | null
+          next_run_at?: string
+          p1_delay_sec?: number
+          p1_early_stop?: boolean
+          p1_steps_completed?: number
+          p1_target_steps?: number
+          p2_rounds?: number
+          p2_rounds_completed?: number
+          phase?: string
+          rabbit_hole_id: string
+          research_mode_p1?: boolean
+          research_mode_p2?: boolean
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_run_at?: string | null
+          next_run_at?: string
+          p1_delay_sec?: number
+          p1_early_stop?: boolean
+          p1_steps_completed?: number
+          p1_target_steps?: number
+          p2_rounds?: number
+          p2_rounds_completed?: number
+          phase?: string
+          rabbit_hole_id?: string
+          research_mode_p1?: boolean
+          research_mode_p2?: boolean
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       breakthrough_modes: {
         Row: {
           activated_at: string

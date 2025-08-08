@@ -5,10 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Play, Pause, Square, Settings, CheckCircle } from 'lucide-react';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 interface AutoRunControlsProps {
   isProcessing: boolean;
   onGenerateStep: () => Promise<void>;
@@ -17,12 +18,13 @@ interface AutoRunControlsProps {
   currentStep: number;
   isAutoRunning: boolean;
   onAutoRunChange: (running: boolean) => void;
-  generationMode: 'single' | 'exploration' | 'grounding' | 'cycling' | 'devils_advocate';
-  onGenerationModeChange: (mode: 'single' | 'exploration' | 'grounding' | 'cycling' | 'devils_advocate') => void;
+  generationMode: 'single' | 'exploration' | 'grounding' | 'cycling' | 'devils_advocate' | 'full_cycle';
+  onGenerationModeChange: (mode: 'single' | 'exploration' | 'grounding' | 'cycling' | 'devils_advocate' | 'full_cycle') => void;
   researchMode: boolean;
   earlyStopEnabled: boolean;
   onEarlyStopChange: (v: boolean) => void;
   onResearchModeChange: (v: boolean) => void;
+  rabbitHoleId?: string;
 }
 
 export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
@@ -38,7 +40,8 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
   researchMode,
   earlyStopEnabled,
   onEarlyStopChange,
-  onResearchModeChange
+  onResearchModeChange,
+  rabbitHoleId
 }) => {
   const [targetSteps, setTargetSteps] = useState(5);
   const [delayBetweenSteps, setDelayBetweenSteps] = useState(3);
@@ -47,6 +50,8 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
   const [autoRunStartStep, setAutoRunStartStep] = useState(0);
   const [cyclePosition, setCyclePosition] = useState(0); // Track position in cycle
   const [cycleStep, setCycleStep] = useState<'single' | 'exploration' | 'grounding'>('single');
+  const [p2Rounds, setP2Rounds] = useState(3);
+  const { toast } = useToast();
 
   // Determine current mode for cycling
   const getCurrentMode = () => {
@@ -115,6 +120,41 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
   };
 
   const progress = targetSteps > 0 ? (stepsCompleted / targetSteps) * 100 : 0;
+
+  const scheduleFullCycle = async () => {
+    try {
+      if (!rabbitHoleId) {
+        toast({ title: 'No session found', description: 'Start or load a rabbit hole first.', variant: 'destructive' });
+        return;
+      }
+      const { data: userRes } = await supabase.auth.getUser();
+      const uid = userRes?.user?.id;
+      if (!uid) {
+        toast({ title: 'Authentication required', description: 'Please sign in to schedule a run.', variant: 'destructive' });
+        return;
+      }
+      const { error } = await supabase.from('automation_runs').insert({
+        user_id: uid,
+        rabbit_hole_id: rabbitHoleId,
+        status: 'active',
+        phase: 'phase1',
+        p1_target_steps: targetSteps,
+        p1_delay_sec: delayBetweenSteps,
+        p1_early_stop: earlyStopEnabled,
+        research_mode_p1: researchMode,
+        p2_rounds: p2Rounds,
+        research_mode_p2: researchMode,
+        next_run_at: new Date().toISOString()
+      });
+      if (error) {
+        toast({ title: 'Failed to schedule', description: error.message, variant: 'destructive' });
+      } else {
+        toast({ title: 'Full Cycle scheduled', description: 'The orchestrator will now run Phase 1 → Phase 2 unattended.' });
+      }
+    } catch (e: any) {
+      toast({ title: 'Unexpected error', description: e?.message || 'Failed to schedule', variant: 'destructive' });
+    }
+  };
 
   return (
     <Card className="border-2 border-neural/20">
@@ -213,6 +253,21 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
                     <div className="space-y-1">
                       <Label htmlFor="cycling-mode" className="text-sm font-medium cursor-pointer">Cycling Mode</Label>
                       <p className="text-xs text-muted-foreground">8 Single → 2 Discovery → 8 Single → 2 Grounding → 2 Devil's Advocate → 3 Single → repeat</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="radio"
+                      id="full-cycle-mode"
+                      value="full_cycle"
+                      checked={generationMode === 'full_cycle'}
+                      onChange={() => onGenerationModeChange('full_cycle')}
+                      disabled={isAutoRunning}
+                      className="w-4 h-4"
+                    />
+                    <div className="space-y-1">
+                      <Label htmlFor="full-cycle-mode" className="text-sm font-medium cursor-pointer">Full Cycle (Unattended)</Label>
+                      <p className="text-xs text-muted-foreground">Phase 1 auto-run → auto Phase 2 grounding via orchestrator</p>
                     </div>
                   </div>
                 </div>

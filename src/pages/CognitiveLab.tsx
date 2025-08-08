@@ -58,7 +58,7 @@ const CognitiveLab = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showScores, setShowScores] = useState(false);
   const [isAutoRunning, setIsAutoRunning] = useState(false);
-  const [generationMode, setGenerationMode] = useState<'single' | 'exploration' | 'grounding' | 'cycling' | 'devils_advocate'>('single');
+  const [generationMode, setGenerationMode] = useState<'single' | 'exploration' | 'grounding' | 'cycling' | 'devils_advocate' | 'full_cycle'>('single');
   const [researchMode, setResearchMode] = useState(false);
   const [bookmarkedSteps, setBookmarkedSteps] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
@@ -1215,7 +1215,7 @@ Total steps analyzed: ${answers.length}`;
                 <ModeEffectivenessTracker
                   answers={answers}
                   currentRabbitHoleId={currentRabbitHole.id}
-                  currentMode={generationMode === 'cycling' ? 'single' : (generationMode === 'devils_advocate' ? 'single' : generationMode)}
+                  currentMode={generationMode === 'cycling' || generationMode === 'full_cycle' ? 'single' : (generationMode === 'devils_advocate' ? 'single' : generationMode)}
                   coherenceMetrics={coherenceMetrics}
                 />
                 <GlobalBrillianceArchive 
