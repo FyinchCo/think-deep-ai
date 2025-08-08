@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Trash2, Plus, Edit2, Save, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Rule {
   id: string;
@@ -59,6 +60,15 @@ export const RulesPanel: React.FC<RulesPanelProps> = ({
     trigger_condition: ''
   });
   const { toast } = useToast();
+  const { user } = useAuth();
+
+  // Safely parse step value which may come as an object or NaN
+  const parseStepNumber = (s: any): number => {
+    const n = typeof s === 'number'
+      ? s
+      : (s && typeof s === 'object' && 'value' in s ? Number((s as any).value) : NaN);
+    return Number.isFinite(n) && n > 0 ? Math.floor(n) : 1;
+  };
 
   useEffect(() => {
     fetchRules();
@@ -95,7 +105,16 @@ export const RulesPanel: React.FC<RulesPanelProps> = ({
       return;
     }
 
-    const stepToUse = currentStep && currentStep > 0 ? currentStep : 1;
+    if (!user) {
+      toast({
+        title: "Not signed in",
+        description: "You must be signed in to add rules",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const stepToUse = parseStepNumber(currentStep);
     console.log('Adding rule with currentStep:', currentStep, 'using:', stepToUse);
 
     try {
@@ -103,6 +122,7 @@ export const RulesPanel: React.FC<RulesPanelProps> = ({
         .from('exploration_rules')
         .insert({
           rabbit_hole_id: rabbitHoleId,
+          user_id: user?.id || null,
           rule_text: newRule.rule_text,
           rule_type: newRule.rule_type,
           priority: newRule.priority,
@@ -146,18 +166,18 @@ export const RulesPanel: React.FC<RulesPanelProps> = ({
         .from('exploration_rules')
         .update({
           ...updates,
-          last_modified_step: currentStep
+          last_modified_step: parseStepNumber(currentStep)
         })
         .eq('id', ruleId);
 
       if (error) throw error;
 
       setRules(prev => prev.map(rule => 
-        rule.id === ruleId ? { ...rule, ...updates, last_modified_step: currentStep } : rule
+        rule.id === ruleId ? { ...rule, ...updates, last_modified_step: parseStepNumber(currentStep) } : rule
       ));
 
       const updatedRules = rules.map(rule => 
-        rule.id === ruleId ? { ...rule, ...updates, last_modified_step: currentStep } : rule
+        rule.id === ruleId ? { ...rule, ...updates, last_modified_step: parseStepNumber(currentStep) } : rule
       );
       onRulesChange?.(updatedRules);
 
