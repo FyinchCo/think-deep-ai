@@ -1068,6 +1068,7 @@ Total steps analyzed: ${answers.length}`;
                       earlyStopEnabled={earlyStopEnabled}
                       onEarlyStopChange={setEarlyStopEnabled}
                       onResearchModeChange={setResearchMode}
+                      rabbitHoleId={currentRabbitHole.id}
                     />
                   </CardContent>
                 </Card>
@@ -1250,6 +1251,7 @@ Total steps analyzed: ${answers.length}`;
                   earlyStopEnabled={earlyStopEnabled}
                   onEarlyStopChange={setEarlyStopEnabled}
                   onResearchModeChange={setResearchMode}
+                  rabbitHoleId={currentRabbitHole.id}
                 />
               </TabsContent>
             </Tabs>

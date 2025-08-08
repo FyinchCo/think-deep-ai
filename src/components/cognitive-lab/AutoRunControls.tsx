@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 interface AutoRunControlsProps {
   isProcessing: boolean;
   onGenerateStep: () => Promise<void>;
@@ -51,6 +52,7 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
   const [cyclePosition, setCyclePosition] = useState(0); // Track position in cycle
   const [cycleStep, setCycleStep] = useState<'single' | 'exploration' | 'grounding'>('single');
   const [p2Rounds, setP2Rounds] = useState(3);
+  const [autoSelectEnabled, setAutoSelectEnabled] = useState(true);
   const { toast } = useToast();
 
   // Determine current mode for cycling
@@ -298,6 +300,27 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
                   disabled={isAutoRunning}
                 />
               </div>
+              <div className="col-span-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label htmlFor="p2Rounds">P2 Rounds</Label>
+                    <p className="text-xs text-muted-foreground">Number of grounding loops after Phase 1</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">loops</Badge>
+                    <Input
+                      id="p2Rounds"
+                      type="number"
+                      min="1"
+                      max="5"
+                      value={p2Rounds}
+                      onChange={(e) => setP2Rounds(Math.min(5, Math.max(1, parseInt(e.target.value) || 1)))}
+                      disabled={isAutoRunning}
+                      className="w-20 text-right"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
               </CollapsibleContent>
             </Collapsible>
@@ -305,6 +328,22 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
             <div className="flex items-center justify-between py-1">
               <Label className="text-xs">Research-Grounded Mode</Label>
               <Switch checked={researchMode} onCheckedChange={onResearchModeChange} disabled={isProcessing} />
+            </div>
+            <div className="flex items-center justify-between py-1">
+              <div className="flex items-center gap-2">
+                <Label className="text-xs">Auto-select “Most Interesting”</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge variant="outline">formula</Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs">score = 0.7*novelty + 0.3*support; ties: testability, then older created_at; floor: novelty ≥ 6 and support ≥ 5</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <Switch checked={autoSelectEnabled} onCheckedChange={setAutoSelectEnabled} disabled={isProcessing} />
             </div>
 
             {isAutoRunning && (

@@ -124,6 +124,7 @@ export type Database = {
           id: number
           level: string
           message: string | null
+          payload: Json
           run_id: string
         }
         Insert: {
@@ -131,6 +132,7 @@ export type Database = {
           id?: number
           level?: string
           message?: string | null
+          payload?: Json
           run_id: string
         }
         Update: {
@@ -138,6 +140,7 @@ export type Database = {
           id?: number
           level?: string
           message?: string | null
+          payload?: Json
           run_id?: string
         }
         Relationships: [
@@ -152,8 +155,10 @@ export type Database = {
       }
       automation_runs: {
         Row: {
+          auto_select_enabled: boolean
           created_at: string
           id: string
+          in_progress_until: string | null
           last_run_at: string | null
           next_run_at: string
           p1_delay_sec: number
@@ -171,8 +176,10 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          auto_select_enabled?: boolean
           created_at?: string
           id?: string
+          in_progress_until?: string | null
           last_run_at?: string | null
           next_run_at?: string
           p1_delay_sec?: number
@@ -190,8 +197,10 @@ export type Database = {
           user_id: string
         }
         Update: {
+          auto_select_enabled?: boolean
           created_at?: string
           id?: string
+          in_progress_until?: string | null
           last_run_at?: string | null
           next_run_at?: string
           p1_delay_sec?: number

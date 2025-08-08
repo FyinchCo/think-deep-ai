@@ -32,11 +32,30 @@ async function processRun(supabase: any, run: any) {
   const rabbitHoleId = run.rabbit_hole_id;
 
   // Helper to log events
-  const logEvent = async (level: string, message: string) => {
-    await supabase.from('automation_events').insert({ run_id: runId, level, message });
+  const logEvent = async (level: string, message: string, payload: Record<string, unknown> = {}) => {
+    await supabase.from('automation_events').insert({ run_id: runId, level, message, payload: { rabbitHoleId, phase: run.phase, ...payload } });
   };
-
   try {
+    // Ownership validation
+    const nowIso = new Date().toISOString();
+    const { data: rh, error: rhErr } = await supabase
+      .from('rabbit_holes')
+      .select('id, user_id')
+      .eq('id', rabbitHoleId)
+      .single();
+    if (rhErr || !rh || rh.user_id !== run.user_id) {
+      await logEvent('error', 'Ownership validation failed', { run_user_id: run.user_id, rabbit_hole_user_id: rh?.user_id });
+      await supabase.from('automation_runs').update({ status: 'failed', last_run_at: nowIso }).eq('id', runId);
+      return;
+    }
+
+    // Acquire run lock (soft lock)
+    if (run.in_progress_until && new Date(run.in_progress_until).getTime() > Date.now()) {
+      await logEvent('info', 'Run currently in progress, skipping tick', { in_progress_until: run.in_progress_until });
+      return;
+    }
+    await supabase.from('automation_runs').update({ in_progress_until: new Date(Date.now() + 9 * 60 * 1000).toISOString() }).eq('id', runId);
+
     // Phase 1: Exploration steps via rabbit-hole-step
     if (run.phase === 'phase1') {
       const actionType = run.p1_steps_completed === 0 ? 'start' : 'next_step';
@@ -93,6 +112,44 @@ async function processRun(supabase: any, run: any) {
       // Decide next state
       const reachedTarget = stepsCompleted >= run.p1_target_steps;
       if (reachedTarget || shouldEarlyStop) {
+        if (run.auto_select_enabled) {
+          // Auto-select most interesting hypothesis proxy from recent answers
+          const { data: candidates } = await supabase
+            .from('answers')
+            .select('id, generated_at, judge_scores')
+            .eq('rabbit_hole_id', rabbitHoleId)
+            .eq('is_valid', true)
+            .order('step_number', { ascending: false })
+            .limit(25);
+          let best: any = null;
+          let bestScore = -1;
+          for (const c of candidates || []) {
+            const js = c.judge_scores || {};
+            const novelty = Number(js.novelty ?? 0);
+            const support = Number(js.support ?? js.depth ?? js.coherence ?? 0);
+            const testability = Number(js.testability ?? 0);
+            const score = 0.7 * novelty + 0.3 * support;
+            const meetsFloor = novelty >= 6 && support >= 5;
+            if (!meetsFloor) continue;
+            if (
+              score > bestScore ||
+              (score === bestScore && testability > Number(best?.judge_scores?.testability ?? 0)) ||
+              (score === bestScore && testability === Number(best?.judge_scores?.testability ?? 0) && new Date(c.generated_at).getTime() < new Date(best.generated_at).getTime())
+            ) {
+              best = c;
+              bestScore = score;
+            }
+          }
+          if (best) {
+            await logEvent('info', 'auto_selected_hypothesis', {
+              selected_answer_id: best.id,
+              score: bestScore,
+              details: 'score = 0.7*novelty + 0.3*support; ties: testability then older created_at'
+            });
+          } else {
+            await logEvent('info', 'auto_select_skipped', { reason: 'No candidate met floor (novelty >= 6 and support >= 5)' });
+          }
+        }
         await supabase.from('automation_runs').update({
           p1_steps_completed: stepsCompleted,
           phase: 'phase2',
