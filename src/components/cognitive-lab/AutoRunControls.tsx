@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 interface AutoRunControlsProps {
   isProcessing: boolean;
@@ -54,6 +55,8 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
   const [p2Rounds, setP2Rounds] = useState(3);
   const [autoSelectEnabled, setAutoSelectEnabled] = useState(true);
   const { toast } = useToast();
+  const { session } = useAuth();
+  const canScheduleFullCycle = Boolean(session && rabbitHoleId);
 
   // Determine current mode for cycling
   const getCurrentMode = () => {
@@ -397,6 +400,29 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
                     >
                       Generate 1 Step
                     </Button>
+                    {generationMode === 'full_cycle' && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="flex-1">
+                              <Button
+                                onClick={scheduleFullCycle}
+                                disabled={!canScheduleFullCycle || isProcessing}
+                                variant="secondary"
+                                className="w-full"
+                              >
+                                Schedule Full Cycle
+                              </Button>
+                            </span>
+                          </TooltipTrigger>
+                          {!canScheduleFullCycle && (
+                            <TooltipContent>
+                              <p>{!session ? 'Sign in to schedule a run' : 'Open or create a rabbit hole first'}</p>
+                            </TooltipContent>
+                          )}
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
                   </>
                 ) : (
                 <>
