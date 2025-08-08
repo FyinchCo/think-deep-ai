@@ -106,7 +106,23 @@ const SUPABASE_PUBLISHABLE_KEY = "your-anon-key"
 npm run dev
 ```
 
-### 5. Create Account & Explore
+### 5. 5-Minute Reproducible Demo (One-Command Setup)
+```bash
+# 1) Configure environment (copy and edit as needed)
+cp .env.example .env
+# Ensure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set
+
+# 2) Seed demo data
+bash scripts/setup.sh
+
+# 3) Run a demo exploration (customize the question)
+node scripts/demo_exploration.js "What is the best cheeseburger in Virginia?"
+
+# 4) Open the app and explore
+open http://localhost:5173/cognitive-lab
+```
+
+### 6. Create Account & Explore
 1. Navigate to `/auth` to create an account
 2. Go to `/cognitive-lab` to start your first exploration
 3. Enter a thought-provoking question and select your exploration mode
