@@ -1067,6 +1067,7 @@ Total steps analyzed: ${answers.length}`;
                       researchMode={researchMode}
                       earlyStopEnabled={earlyStopEnabled}
                       onEarlyStopChange={setEarlyStopEnabled}
+                      onResearchModeChange={setResearchMode}
                     />
                   </CardContent>
                 </Card>
@@ -1248,6 +1249,7 @@ Total steps analyzed: ${answers.length}`;
                   researchMode={researchMode}
                   earlyStopEnabled={earlyStopEnabled}
                   onEarlyStopChange={setEarlyStopEnabled}
+                  onResearchModeChange={setResearchMode}
                 />
               </TabsContent>
             </Tabs>

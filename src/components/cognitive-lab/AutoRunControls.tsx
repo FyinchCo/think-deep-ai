@@ -22,6 +22,7 @@ interface AutoRunControlsProps {
   researchMode: boolean;
   earlyStopEnabled: boolean;
   onEarlyStopChange: (v: boolean) => void;
+  onResearchModeChange: (v: boolean) => void;
 }
 
 export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
@@ -36,7 +37,8 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
   onGenerationModeChange,
   researchMode,
   earlyStopEnabled,
-  onEarlyStopChange
+  onEarlyStopChange,
+  onResearchModeChange
 }) => {
   const [targetSteps, setTargetSteps] = useState(5);
   const [delayBetweenSteps, setDelayBetweenSteps] = useState(3);
@@ -244,6 +246,11 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
             </div>
               </CollapsibleContent>
             </Collapsible>
+
+            <div className="flex items-center justify-between py-1">
+              <Label className="text-xs">Research-Grounded Mode</Label>
+              <Switch checked={researchMode} onCheckedChange={onResearchModeChange} disabled={isProcessing} />
+            </div>
 
             {isAutoRunning && (
               <div className="space-y-2">
