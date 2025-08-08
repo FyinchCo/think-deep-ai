@@ -56,27 +56,71 @@ async function processRun(supabase: any, run: any) {
     }
     await supabase.from('automation_runs').update({ in_progress_until: new Date(Date.now() + 9 * 60 * 1000).toISOString() }).eq('id', runId);
 
-    // Phase 1: Exploration steps via rabbit-hole-step
+    // Phase 1: Exploration steps with strategy support (single | cycling)
     if (run.phase === 'phase1') {
-      const actionType = run.p1_steps_completed === 0 ? 'start' : 'next_step';
-      await logEvent('info', `Phase1: invoking rabbit-hole-step (${actionType})`);
+      const nextStepNumber = (run.p1_steps_completed || 0) + 1;
+      const strategy: string = run.p1_mode_strategy || 'single';
+
+      // Determine mode for this step when cycling
+      const chooseCyclingMode = (n: number): 'single' | 'exploration' | 'grounding' | 'devils_advocate' => {
+        const pos = (n - 1) % 25; // 25-step pattern
+        if (pos < 8) return 'single';          // 1-8: Single
+        if (pos < 10) return 'exploration';    // 9-10: Exploration panel
+        if (pos < 18) return 'single';         // 11-18: Single
+        if (pos < 20) return 'grounding';      // 19-20: Grounding panel
+        if (pos < 22) return 'devils_advocate';// 21-22: Devil's advocate
+        return 'single';                       // 23-25: Single
+      };
+
+      const mode = strategy === 'cycling' ? chooseCyclingMode(nextStepNumber) : 'single';
+      await logEvent('info', `Phase1 mode chosen: ${mode}`, { strategy, next_step: nextStepNumber });
 
       // 10 minute timeout safety wrapper
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 10 * 60 * 1000);
 
-      const { data, error } = await supabase.functions.invoke('rabbit-hole-step', {
-        body: {
-          rabbit_hole_id: rabbitHoleId,
-          action_type: actionType,
-          research_mode: run.research_mode_p1,
-        },
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
+      let error: any = null;
+
+      try {
+        if (mode === 'exploration') {
+          await logEvent('info', 'Phase1: invoking panel-step');
+          const { error: err } = await supabase.functions.invoke('panel-step', {
+            body: {
+              rabbit_hole_id: rabbitHoleId,
+              research_mode: run.research_mode_p1,
+            },
+            signal: controller.signal,
+          });
+          error = err;
+        } else if (mode === 'grounding') {
+          await logEvent('info', 'Phase1: invoking grounding-panel-step (P1)');
+          const { error: err } = await supabase.functions.invoke('grounding-panel-step', {
+            body: {
+              rabbit_hole_id: rabbitHoleId,
+              research_mode: run.research_mode_p1,
+            },
+            signal: controller.signal,
+          });
+          error = err;
+        } else {
+          const actionType = run.p1_steps_completed === 0 ? 'start' : 'next_step';
+          await logEvent('info', `Phase1: invoking rabbit-hole-step (${actionType})`, { generation_mode: mode });
+          const { error: err } = await supabase.functions.invoke('rabbit-hole-step', {
+            body: {
+              rabbit_hole_id: rabbitHoleId,
+              action_type: actionType,
+              generation_mode: mode === 'devils_advocate' ? 'devils_advocate' : 'single',
+            },
+            signal: controller.signal,
+          });
+          error = err;
+        }
+      } finally {
+        clearTimeout(timeout);
+      }
 
       if (error) {
-        await logEvent('error', `rabbit-hole-step failed: ${error.message || JSON.stringify(error)}`);
+        await logEvent('error', `Phase1 step failed: ${error.message || JSON.stringify(error)}`, { mode });
         // Backoff 2 minutes on error
         await supabase.from('automation_runs').update({
           last_run_at: new Date().toISOString(),

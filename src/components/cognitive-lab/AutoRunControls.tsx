@@ -54,6 +54,7 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
   const [cycleStep, setCycleStep] = useState<'single' | 'exploration' | 'grounding'>('single');
   const [p2Rounds, setP2Rounds] = useState(3);
   const [autoSelectEnabled, setAutoSelectEnabled] = useState(true);
+  const [useCyclingP1, setUseCyclingP1] = useState(false);
   const { toast } = useToast();
   const { session } = useAuth();
   const canScheduleFullCycle = Boolean(session && rabbitHoleId);
@@ -146,6 +147,8 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
         p1_target_steps: targetSteps,
         p1_delay_sec: delayBetweenSteps,
         p1_early_stop: earlyStopEnabled,
+        auto_select_enabled: autoSelectEnabled,
+        p1_mode_strategy: useCyclingP1 ? 'cycling' : 'single',
         research_mode_p1: researchMode,
         p2_rounds: p2Rounds,
         research_mode_p2: researchMode,
@@ -347,6 +350,10 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
                 </TooltipProvider>
               </div>
               <Switch checked={autoSelectEnabled} onCheckedChange={setAutoSelectEnabled} disabled={isProcessing} />
+            </div>
+            <div className="flex items-center justify-between py-1">
+              <Label className="text-xs">Use Cycling in Phase 1 (Full Cycle)</Label>
+              <Switch checked={useCyclingP1} onCheckedChange={setUseCyclingP1} disabled={isProcessing} />
             </div>
 
             {isAutoRunning && (

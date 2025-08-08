@@ -163,6 +163,7 @@ export type Database = {
           next_run_at: string
           p1_delay_sec: number
           p1_early_stop: boolean
+          p1_mode_strategy: string
           p1_steps_completed: number
           p1_target_steps: number
           p2_rounds: number
@@ -184,6 +185,7 @@ export type Database = {
           next_run_at?: string
           p1_delay_sec?: number
           p1_early_stop?: boolean
+          p1_mode_strategy?: string
           p1_steps_completed?: number
           p1_target_steps?: number
           p2_rounds?: number
@@ -205,6 +207,7 @@ export type Database = {
           next_run_at?: string
           p1_delay_sec?: number
           p1_early_stop?: boolean
+          p1_mode_strategy?: string
           p1_steps_completed?: number
           p1_target_steps?: number
           p2_rounds?: number
