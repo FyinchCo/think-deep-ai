@@ -1,17 +1,26 @@
-# Screenshots
+# Visual Documentation
 
-This folder contains visual documentation of The Axiom Project interface and functionality.
+This folder contains screenshots and diagrams that showcase The Axiom Project's interface and technical architecture.
 
-## Available Screenshots
+## Available Images
 
-- `dashboard.png` - Main cognitive lab dashboard showing exploration controls and metrics
-- `exploration-flow.png` - Multi-step reasoning chain with quality indicators
-- `breakthrough-detection.png` - Breakthrough detection system in action
-- `analytics-overview.png` - Real-time analytics and performance metrics
-- `security-architecture.png` - Enterprise security implementation diagram
+- `architecture-diagram.png` - Technical system architecture overview
+- `dashboard.png` - Main cognitive lab dashboard interface
+- `breakthrough-detection.png` - Breakthrough detection system visualization
 
-## Usage in Documentation
+## Integration with README
 
-These screenshots are referenced in the main README.md file to provide visual context for the technical descriptions.
+These visuals are embedded in the main README.md to provide:
+- Clear technical architecture understanding
+- Interface design demonstration  
+- Feature functionality visualization
+- Professional presentation for technical review
 
-To view the application in action, visit the live demo or set up a local development environment following the installation instructions in the main README.
+![Architecture Overview](architecture-diagram.png)
+*System architecture showing AI orchestration, data flow, and security layers*
+
+![Dashboard Interface](dashboard.png)
+*Main application interface with exploration controls and real-time metrics*
+
+![Breakthrough Detection](breakthrough-detection.png)
+*Breakthrough detection algorithm in action during philosophical exploration*

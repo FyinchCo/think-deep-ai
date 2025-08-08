@@ -114,18 +114,10 @@ npm run dev
 ## 🏗️ Technical Architecture
 
 ### System Overview
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   React Client  │───▶│  Supabase Edge   │───▶│  AI Providers   │
-│   (TypeScript)  │    │   Functions      │    │ (OpenAI/Grok)   │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-         │                       │                       │
-         ▼                       ▼                       ▼
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Auth System   │    │   PostgreSQL     │    │   Vector Store  │
-│ (Row Level Sec) │    │   Database       │    │  (Embeddings)   │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-```
+
+![Architecture Diagram](screenshots/architecture-diagram.png)
+
+*Complete system architecture showing AI orchestration, security layers, and data flow*
 
 ### Core Components
 
@@ -224,12 +216,20 @@ grounding-panel-step/     // Reality-anchored exploration
 
 ## 📊 How It Works
 
+![Dashboard Interface](screenshots/dashboard.png)
+
+*Main cognitive lab interface showing exploration controls and real-time quality metrics*
+
 1. **Question Analysis**: Architectural analysis identifies breakthrough potential
 2. **AI Generation**: Multiple models generate insights with cognitive pressure
 3. **Quality Assessment**: AI judge scores responses on novelty, coherence, and depth
 4. **Novelty Check**: Vector similarity prevents repetitive insights
 5. **Breakthrough Detection**: Identifies paradigm-shifting concepts
 6. **Iterative Refinement**: Each step builds on previous insights
+
+![Breakthrough Detection](screenshots/breakthrough-detection.png)
+
+*Breakthrough detection system identifying paradigm shifts in real-time*
 
 ## 🎯 Exploration Modes
 
