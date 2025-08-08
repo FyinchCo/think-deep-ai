@@ -34,7 +34,9 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
   onAutoRunChange,
   generationMode,
   onGenerationModeChange,
-  researchMode
+  researchMode,
+  earlyStopEnabled,
+  onEarlyStopChange
 }) => {
   const [targetSteps, setTargetSteps] = useState(5);
   const [delayBetweenSteps, setDelayBetweenSteps] = useState(3);
@@ -240,84 +242,88 @@ export const AutoRunControls: React.FC<AutoRunControlsProps> = ({
                 />
               </div>
             </div>
-          </CollapsibleContent>
-        </Collapsible>
+              </CollapsibleContent>
+            </Collapsible>
 
-        {isAutoRunning && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span>Progress: {stepsCompleted} / {targetSteps}</span>
-              <Badge variant="secondary">
-                Step {currentStep}
-              </Badge>
+            {isAutoRunning && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span>Progress: {stepsCompleted} / {targetSteps}</span>
+                  <Badge variant="secondary">
+                    Step {currentStep}
+                  </Badge>
+                </div>
+                {generationMode === 'cycling' && (
+                   <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Cycle Mode: {getCurrentMode()}</span>
+                    <span>Cycle Step: {(cyclePosition % 25) + 1}/25</span>
+                  </div>
+                )}
+                {researchMode && (
+                  <div className="flex items-center gap-2 text-xs text-neural">
+                    <CheckCircle className="h-3 w-3" />
+                    Research-Grounded Mode Active
+                  </div>
+                )}
+                <div className="flex items-center justify-between py-1">
+                  <Label className="text-xs">Early Stop on Convergence</Label>
+                  <Switch checked={earlyStopEnabled} onCheckedChange={onEarlyStopChange} disabled={isProcessing} />
+                </div>
+                <Progress value={progress} className="h-2" />
+                <p className="text-xs text-muted-foreground">
+                  {isProcessing ? 'Generating step...' : `Next step in ${delayBetweenSteps}s`}
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                {!isAutoRunning ? (
+                  <>
+                    <Button
+                      onClick={startAutoRun}
+                      disabled={isProcessing}
+                      className="flex-1"
+                    >
+                      <Play className="h-4 w-4 mr-2" />
+                      Start Auto-Run ({generationMode === 'cycling' ? 'Cycling' : generationMode === 'exploration' ? 'Exploration' : generationMode === 'grounding' ? 'Grounding' : generationMode === 'devils_advocate' ? 'Devil\'s Advocate' : 'Single'})
+                    </Button>
+                    <Button
+                      onClick={generationMode === 'exploration' ? onGeneratePanelStep : generationMode === 'grounding' ? onGenerateGroundingStep : generationMode === 'devils_advocate' ? onGenerateStep : onGenerateStep}
+                      disabled={isProcessing}
+                      variant="outline"
+                      size="sm"
+                    >
+                      Generate 1 Step
+                    </Button>
+                  </>
+                ) : (
+                <>
+                  <Button
+                    onClick={pauseAutoRun}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    <Pause className="h-4 w-4 mr-2" />
+                    Pause
+                  </Button>
+                  <Button
+                    onClick={stopAutoRun}
+                    variant="destructive"
+                    className="flex-1"
+                  >
+                    <Square className="h-4 w-4 mr-2" />
+                    Stop
+                  </Button>
+                  </>
+                )}
+              </div>
             </div>
-            {generationMode === 'cycling' && (
-               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>Cycle Mode: {getCurrentMode()}</span>
-                <span>Cycle Step: {(cyclePosition % 25) + 1}/25</span>
-              </div>
-            )}
-            {researchMode && (
-              <div className="flex items-center gap-2 text-xs text-neural">
-                <CheckCircle className="h-3 w-3" />
-                Research-Grounded Mode Active
-              </div>
-            )}
-            <Progress value={progress} className="h-2" />
+
             <p className="text-xs text-muted-foreground">
-              {isProcessing ? 'Generating step...' : `Next step in ${delayBetweenSteps}s`}
+              Auto-run will generate {targetSteps} {generationMode === 'cycling' ? 'steps cycling through modes (8 Single → 2 Discovery → 8 Single → 2 Grounding → 2 Devil\'s Advocate → 3 Single)' : generationMode === 'exploration' ? 'exploration panel' : generationMode === 'grounding' ? 'grounding panel' : generationMode === 'devils_advocate' ? 'devil\'s advocate' : 'single-perspective'} steps with {delayBetweenSteps} second delays between each step.
             </p>
-          </div>
-        )}
-
-        <div className="space-y-2">
-          <div className="flex gap-2">
-            {!isAutoRunning ? (
-              <>
-                <Button
-                  onClick={startAutoRun}
-                  disabled={isProcessing}
-                  className="flex-1"
-                >
-                  <Play className="h-4 w-4 mr-2" />
-                  Start Auto-Run ({generationMode === 'cycling' ? 'Cycling' : generationMode === 'exploration' ? 'Exploration' : generationMode === 'grounding' ? 'Grounding' : generationMode === 'devils_advocate' ? 'Devil\'s Advocate' : 'Single'})
-                </Button>
-                <Button
-                  onClick={generationMode === 'exploration' ? onGeneratePanelStep : generationMode === 'grounding' ? onGenerateGroundingStep : generationMode === 'devils_advocate' ? onGenerateStep : onGenerateStep}
-                  disabled={isProcessing}
-                  variant="outline"
-                  size="sm"
-                >
-                  Generate 1 Step
-                </Button>
-              </>
-            ) : (
-            <>
-              <Button
-                onClick={pauseAutoRun}
-                variant="outline"
-                className="flex-1"
-              >
-                <Pause className="h-4 w-4 mr-2" />
-                Pause
-              </Button>
-              <Button
-                onClick={stopAutoRun}
-                variant="destructive"
-                className="flex-1"
-              >
-                <Square className="h-4 w-4 mr-2" />
-                Stop
-              </Button>
-              </>
-            )}
-          </div>
-        </div>
-
-        <p className="text-xs text-muted-foreground">
-          Auto-run will generate {targetSteps} {generationMode === 'cycling' ? 'steps cycling through modes (8 Single → 2 Discovery → 8 Single → 2 Grounding → 2 Devil\'s Advocate → 3 Single)' : generationMode === 'exploration' ? 'exploration panel' : generationMode === 'grounding' ? 'grounding panel' : generationMode === 'devils_advocate' ? 'devil\'s advocate' : 'single-perspective'} steps with {delayBetweenSteps} second delays between each step.
-        </p>
-      </CardContent>
-    </Card>
-  );
-};
+          </CardContent>
+        </Card>
+      );
+    };

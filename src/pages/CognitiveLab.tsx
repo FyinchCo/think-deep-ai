@@ -18,6 +18,7 @@ import { SearchAndFilter } from '@/components/cognitive-lab/SearchAndFilter';
 import { CoherenceMonitor } from '@/components/cognitive-lab/CoherenceMonitor';
 import { MetricHeartbeat } from '@/components/cognitive-lab/MetricHeartbeat';
 import { PruningRitual } from '@/components/cognitive-lab/PruningRitual';
+import { JaccardConvergenceDetector } from '@/algorithms/convergence/jaccard';
 import { useCoherenceTracking } from "@/hooks/useCoherenceTracking";
 import { useBrillianceDetection } from "@/hooks/useBrillianceDetection";
 import { useMetricTracking } from "@/hooks/useMetricTracking";
@@ -121,6 +122,25 @@ const CognitiveLab = () => {
   useEffect(() => {
     updateMetrics(answers);
   }, [answers, updateMetrics]);
+
+  // Early stop on semantic convergence (Jaccard >= 0.8) over last 3 steps
+  useEffect(() => {
+    if (!earlyStopEnabled || !isAutoRunning) return;
+    if (answers.length < 3) return;
+    const detector = new JaccardConvergenceDetector({ jaccardThreshold: 0.8, windowSize: 3, minIterations: 3, stabilityThreshold: 0.9, noveltyThreshold: 0.1 });
+    const recent = answers.slice(-3).map(a => a.answer_text);
+    let converged = false;
+    for (const t of recent) {
+      const m = detector.addResponse(t);
+      if (m.isConverged) {
+        converged = true;
+      }
+    }
+    if (converged) {
+      setIsAutoRunning(false);
+      toast({ title: 'Early Stop', description: 'Convergence detected; auto-run halted.' });
+    }
+  }, [answers, earlyStopEnabled, isAutoRunning, toast]);
 
   const philosophySuggestions = [
     "What is the nature of consciousness and how does it emerge from physical processes?",
